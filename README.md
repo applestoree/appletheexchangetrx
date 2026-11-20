@@ -139,6 +139,26 @@ Maintain an integration map in this README as project files and features are add
 Do not mark an integration as verified without checking the actual code or running an appropriate test.
 
 
+## 5. Current Integration Map
+
+| File / component | Purpose | Consumer / dependency | Connection method | Status |
+|---|---|---|---|---|
+| `index.html` | Input UI, validation, output rendering | Supabase Edge Function `generate-image-prompt` | HTTP POST | Implemented in frontend; backend contract not re-verified |
+| `template-prompt.md` | Variable-based master image prompt template | Expected consumer: `generate-image-prompt` Edge Function | GitHub Raw URL | Source created; backend loading/use not yet verified |
+| `README.md` | Project rules, architecture notes, integration map | Project contributors and AI assistants | Repository documentation | Reference/documentation |
+
+### Current template source
+
+Raw URL:
+
+```text
+https://raw.githubusercontent.com/applestoree/appletheexchangetrx/main/template-prompt.md
+```
+
+The current frontend sends the existing payload keys `subject`, `headline`, `subheadline`, `feature_items`, `background`, `composition`, `style`, `quality`, and `ratio`. These are the variable contract documented in `template-prompt.md`.
+
+**Integration gap:** The Supabase project connector did not authorize reading the `generate-image-prompt` Edge Function source during this task. Therefore, do not claim that the Edge Function already loads or applies `template-prompt.md`. The next integration step is to inspect that function, then update it to fetch and resolve the Raw URL while preserving its existing response contract. Verify the complete frontend-to-backend flow afterward.
+
 ## 5. Example External Source: AI Subject Strategist
 
 Example file: `ai-subject-strategist.md`
