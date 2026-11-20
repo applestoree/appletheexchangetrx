@@ -158,11 +158,25 @@ Do not mark an integration as verified without checking the actual code or runni
 
 | File / component | Purpose | Consumer / dependency | Connection method | Status |
 |---|---|---|---|---|
-| `index.html` | Input UI, validation, fetches the master template, resolves variables, and renders/copies output | `template-prompt.md` | HTTP GET to GitHub Raw; variable resolution in browser JavaScript | Implemented in source; live Canvas runtime fetch is not independently tested |
+| `index.html` | Input UI, validation, fetches strategist and master template, resolves variables, and renders/copies output | `ai-subject-strategist.md`, `template-prompt.md` | HTTP GET to both GitHub Raw URLs; strategist text is exposed for copying and template variables are resolved in browser JavaScript | Both GET integrations implemented in source; live Canvas runtime fetch is not independently tested |
 | `template-prompt.md` | Variable-based master image prompt template | `index.html` | HTTP GET to GitHub Raw | Source created and wired as the frontend template source |
-| `ai-subject-strategist.md` | Instructions and strategy for Gemini to generate `subject` only | Gemini AI built into Gemini Canvas | Used as the AI instruction source in the Canvas workflow; no Gemini API call is implemented in `index.html` | Planned; file not yet created |
+| `ai-subject-strategist.md` | Gemini instructions and strategy to generate `subject` only | `index.html` loads the instruction; user applies it with Gemini Canvas AI | HTTP GET from GitHub Raw; extracted instruction is available through the Copy Gemini Instructions control | Created and connected in source; live Canvas runtime fetch not independently tested |
 | Gemini Canvas AI | Automatically generate the `subject` using its built-in AI capability | Gemini Canvas app workflow | Native Canvas capability; not a custom JavaScript/API integration in `index.html` | Available as the target environment capability; app workflow not yet verified |
 | `README.md` | Project rules, architecture notes, integration map | Project contributors and AI assistants | Repository documentation | Reference/documentation |
+
+
+### Repository file-to-Raw connection map
+
+Repository root inventory reviewed on 2026-11-20:
+
+| Repository file | Purpose | Raw URL / handling | Connection status |
+|---|---|---|---|
+| `index.html` | Gemini Canvas application entry point | Entry file; it cannot fetch itself | Application entry point; exception documented |
+| `README.md` | Project documentation and contributor instructions | Documentation only; not runtime application content | Reference-only; not loaded by the app |
+| `template-prompt.md` | Master image-generation prompt and variable contract | [GitHub Raw](https://raw.githubusercontent.com/applestoree/appletheexchangetrx/main/template-prompt.md) | Fetched by `index.html` using HTTP GET and consumed to render the final prompt |
+| `ai-subject-strategist.md` | Gemini Canvas instructions for generating the `subject` only | [GitHub Raw](https://raw.githubusercontent.com/applestoree/appletheexchangetrx/main/ai-subject-strategist.md) | Fetched by `index.html` using HTTP GET; extracted instruction is available through the Copy Gemini Instructions control |
+
+The application does not treat README documentation as executable runtime content. If new application files are added, update this map and connect each applicable text source through `index.html` with HTTP GET. Record explicit exceptions for entry files, documentation, and binary assets.
 
 ### Current template source
 
@@ -172,9 +186,14 @@ Raw URL:
 https://raw.githubusercontent.com/applestoree/appletheexchangetrx/main/template-prompt.md
 ```
 
+The strategist source is loaded from:
+`https://raw.githubusercontent.com/applestoree/appletheexchangetrx/main/ai-subject-strategist.md`
+
 The current frontend sends the existing payload keys `subject`, `headline`, `subheadline`, `feature_items`, `background`, `composition`, `style`, `quality`, and `ratio`. These are the variable contract documented in `template-prompt.md`.
 
-**Current prompt-rendering flow:** `index.html` fetches the Raw URL above with HTTP GET, extracts the fenced `text` master prompt, resolves the documented variables in the browser, and displays the resulting prompt. The current code still expects the user to supply `subject` and `headline`; automatic subject generation is not yet wired.
+**Current subject workflow:** `index.html` fetches `ai-subject-strategist.md` with HTTP GET, extracts its fenced `text` instruction, and enables the Copy Gemini Instructions control. The user copies that instruction, applies it to Gemini AI in Gemini Canvas, and pastes the returned subject into the Subject field. The application does not invoke Gemini automatically; no Canvas-native invocation API is assumed or implemented.
+
+**Current prompt-rendering flow:** `index.html` fetches `template-prompt.md` with HTTP GET, extracts the fenced `text` master prompt, resolves the documented variables in the browser, and displays the resulting prompt. The user still supplies the headline and other form values.
 
 **Verification status:** The source wiring is committed, but a live browser/Canvas runtime test of GitHub Raw access and the complete prompt-rendering interaction has not yet been performed.
 
@@ -258,7 +277,7 @@ The current `index.html` source reviewed for this README includes:
 
 ### Prompt inputs
 
-- **Subject** — required.
+- **Subject** — required; can be prepared using the separately loaded Gemini Canvas strategist instructions.
 - **Headline** — required.
 - **Subheadline** — optional.
 - **Feature Items** — dynamic entries, maximum 20.
@@ -310,15 +329,15 @@ When continuing this project:
 2. Inspect the relevant repository files to understand current facts; do not assume undocumented files exist.
 3. Audit repository-wide file connectivity: every file other than `index.html` that belongs to the application must be fetched by `index.html` through its GitHub Raw URL using HTTP GET, or have its exception explicitly documented in the connection map.
 4. Identify whether the requested work concerns an external source, frontend runtime, or backend.
-4. Create or edit external-source files when the task concerns reusable AI instructions or reference content.
-5. Edit `index.html` when the task requires frontend UI, logic, runtime integration, or loading an external source.
-6. Follow the five **Mandatory Gemini Canvas architecture rules** in Section 6. Gemini AI is built into Canvas; do not implement a custom Gemini API, API key, JavaScript integration, or Gemini-specific backend in `index.html`.
-7. Keep each external source focused on one role or purpose. For example, subject-generation strategy belongs in `ai-subject-strategist.md`.
-8. Preserve filenames and established schemas unless the user requests a change.
-9. Do not duplicate large external instructions in `index.html` when they can be loaded from their source file.
-10. Do not invent a Raw URL. Derive it from the actual repository owner, repository name, branch, and file path.
-11. Verify that external content is successfully loaded and used before claiming integration is complete.
-12. State exactly which files were changed and why.
+5. Create or edit external-source files when the task concerns reusable AI instructions or reference content.
+6. Edit `index.html` when the task requires frontend UI, logic, runtime integration, or loading an external source.
+7. Follow the five **Mandatory Gemini Canvas architecture rules** in Section 6. Gemini AI is built into Canvas; do not implement a custom Gemini API, API key, JavaScript integration, or Gemini-specific backend in `index.html`.
+8. Keep each external source focused on one role or purpose. For example, subject-generation strategy belongs in `ai-subject-strategist.md`.
+9. Preserve filenames and established schemas unless the user requests a change.
+10. Do not duplicate large external instructions in `index.html` when they can be loaded from their source file.
+11. Do not invent a Raw URL. Derive it from the actual repository owner, repository name, branch, and file path.
+12. Verify that external content is successfully loaded and used before claiming integration is complete.
+13. State exactly which files were changed and why.
 
 ### Requirement discipline
 
