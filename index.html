@@ -1,0 +1,1231 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Image Prompt Generator</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            obsidian: {
+              950: '#07090f',
+              900: '#0d111a',
+              850: '#131825',
+              800: '#1a2030',
+              700: '#262f45',
+            }
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    /* Custom Scrollbar for SaaS Dashboard Feel */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0d111a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #262f45;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #3b486b;
+    }
+
+    /* JSON Syntax Highlighting */
+    .json-key { color: #a78bfa; }
+    .json-string { color: #34d399; }
+    .json-number { color: #fbbf24; }
+    .json-boolean { color: #60a5fa; }
+    .json-null { color: #f87171; }
+  </style>
+</head>
+<body class="bg-obsidian-950 text-slate-200 font-sans antialiased min-h-screen flex flex-col selection:bg-violet-500/30 selection:text-violet-200">
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- Header -->
+  <header class="sticky top-0 z-30 border-b border-slate-800/80 bg-obsidian-900/80 backdrop-blur-xl">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3.5">
+        <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-600/20 border border-violet-400/20 shrink-0">
+          <i data-lucide="sparkles" class="w-5 h-5 sm:w-6 sm:h-6 text-white"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-base sm:text-xl font-bold tracking-tight text-white">AI Image Prompt Generator</h1>
+            <span class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-violet-500/10 text-violet-300 border border-violet-500/20">
+              Master Template
+            </span>
+          </div>
+          <p class="text-xs sm:text-sm text-slate-400 line-clamp-1">Create structured image prompts with your master template.</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <div class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-obsidian-850 border border-slate-800 text-xs text-slate-400">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span>Edge Function Ready</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+
+      <!-- Left Column: Input Form -->
+      <section class="lg:col-span-6 bg-obsidian-900 border border-slate-800/80 rounded-2xl shadow-xl shadow-black/30 overflow-hidden">
+        <div class="px-5 sm:px-6 py-4 border-b border-slate-800/80 flex items-center justify-between bg-obsidian-850/40">
+          <div class="flex items-center gap-2.5">
+            <i data-lucide="sliders-horizontal" class="w-4 h-4 text-violet-400"></i>
+            <h2 class="text-sm font-semibold text-white tracking-wide uppercase">Prompt Parameters</h2>
+          </div>
+          <button
+            type="button"
+            id="btn-reset-form"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/80 border border-transparent hover:border-slate-700 transition-all cursor-pointer"
+          >
+            <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+            <span>Reset Form</span>
+          </button>
+        </div>
+
+        <form id="prompt-form" class="p-5 sm:p-6 space-y-5" novalidate>
+          <!-- Validation Alert Banner -->
+          <div id="form-validation-banner" class="hidden rounded-xl bg-rose-500/10 border border-rose-500/30 p-3.5 text-xs text-rose-200 flex items-start gap-2.5">
+            <i data-lucide="alert-circle" class="w-4 h-4 text-rose-400 shrink-0 mt-0.5"></i>
+            <div id="form-validation-message">Please check the required fields below.</div>
+          </div>
+
+          <!-- Subject (Required) -->
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label for="input-subject" class="block text-sm font-medium text-slate-200">
+                Subject <span class="text-rose-400">*</span>
+              </label>
+              <span class="text-[11px] text-slate-500">Required</span>
+            </div>
+            <input
+              type="text"
+              id="input-subject"
+              name="subject"
+              placeholder="Describe the main subject of your image."
+              class="w-full rounded-xl bg-obsidian-950 border border-slate-800 px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all"
+            />
+            <p id="error-subject" class="hidden mt-1.5 text-xs text-rose-400 flex items-center gap-1">
+              <i data-lucide="info" class="w-3.5 h-3.5"></i>
+              <span>Subject wajib diisi.</span>
+            </p>
+          </div>
+
+          <!-- Headline (Required) & Subheadline -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <div class="flex items-center justify-between mb-1.5">
+                <label for="input-headline" class="block text-sm font-medium text-slate-200">
+                  Headline <span class="text-rose-400">*</span>
+                </label>
+                <span class="text-[11px] text-slate-500">Required</span>
+              </div>
+              <input
+                type="text"
+                id="input-headline"
+                name="headline"
+                placeholder="Enter your main headline."
+                class="w-full rounded-xl bg-obsidian-950 border border-slate-800 px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all"
+              />
+              <p id="error-headline" class="hidden mt-1.5 text-xs text-rose-400 flex items-center gap-1">
+                <i data-lucide="info" class="w-3.5 h-3.5"></i>
+                <span>Headline wajib diisi.</span>
+              </p>
+            </div>
+
+            <div>
+              <div class="flex items-center justify-between mb-1.5">
+                <label for="input-subheadline" class="block text-sm font-medium text-slate-200">
+                  Subheadline
+                </label>
+                <span class="text-[11px] text-slate-500">Optional</span>
+              </div>
+              <input
+                type="text"
+                id="input-subheadline"
+                name="subheadline"
+                placeholder="Enter supporting headline."
+                class="w-full rounded-xl bg-obsidian-950 border border-slate-800 px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all"
+              />
+            </div>
+          </div>
+
+          <!-- Dynamic Feature Items -->
+          <div class="pt-1">
+            <div class="flex items-center justify-between mb-2">
+              <div>
+                <label class="block text-sm font-medium text-slate-200">Feature Items</label>
+                <p class="text-xs text-slate-500">Key highlights or callouts (<span id="feature-count">0</span>/20 max, 200 chars each)</p>
+              </div>
+              <button
+                type="button"
+                id="btn-add-feature"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-violet-600/15 text-violet-300 hover:bg-violet-600/25 border border-violet-500/30 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                <span>Add Feature</span>
+              </button>
+            </div>
+
+            <div id="feature-items-list" class="space-y-2.5">
+              <!-- Dynamic feature rows rendered via JS -->
+            </div>
+
+            <div id="feature-empty-state" class="rounded-xl border border-dashed border-slate-800 bg-obsidian-950/50 px-4 py-3 text-center text-xs text-slate-500">
+              No feature items added yet. Click <span class="text-violet-400 font-medium">+ Add Feature</span> to include highlights.
+            </div>
+            <p id="error-features" class="hidden mt-1.5 text-xs text-rose-400"></p>
+          </div>
+
+          <!-- Background -->
+          <div>
+            <label for="input-background" class="block text-sm font-medium text-slate-200 mb-1.5">
+              Background
+            </label>
+            <textarea
+              id="input-background"
+              name="background"
+              rows="2"
+              placeholder="Describe the background, environment, colors, and atmosphere."
+              class="w-full rounded-xl bg-obsidian-950 border border-slate-800 px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all resize-y"
+            ></textarea>
+          </div>
+
+          <!-- Composition -->
+          <div>
+            <label for="input-composition" class="block text-sm font-medium text-slate-200 mb-1.5">
+              Composition
+            </label>
+            <textarea
+              id="input-composition"
+              name="composition"
+              rows="2"
+              placeholder="Describe the camera angle, layout, subject position, and visual hierarchy."
+              class="w-full rounded-xl bg-obsidian-950 border border-slate-800 px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all resize-y"
+            ></textarea>
+          </div>
+
+          <!-- Style & Quality -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label for="input-style" class="block text-sm font-medium text-slate-200 mb-1.5">
+                Style
+              </label>
+              <textarea
+                id="input-style"
+                name="style"
+                rows="3"
+                placeholder="Describe the visual style, artistic direction, and design aesthetic."
+                class="w-full rounded-xl bg-obsidian-950 border border-slate-800 px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all resize-y"
+              ></textarea>
+            </div>
+
+            <div>
+              <label for="input-quality" class="block text-sm font-medium text-slate-200 mb-1.5">
+                Quality
+              </label>
+              <textarea
+                id="input-quality"
+                name="quality"
+                rows="3"
+                placeholder="Describe lighting, rendering quality, details, and resolution."
+                class="w-full rounded-xl bg-obsidian-950 border border-slate-800 px-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all resize-y"
+              ></textarea>
+            </div>
+          </div>
+
+          <!-- Aspect Ratio -->
+          <div>
+            <label for="input-ratio" class="block text-sm font-medium text-slate-200 mb-1.5">
+              Aspect Ratio
+            </label>
+            <div class="relative">
+              <select
+                id="input-ratio"
+                name="ratio"
+                class="w-full appearance-none rounded-xl bg-obsidian-950 border border-slate-800 px-3.5 py-2.5 pr-10 text-sm text-white focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all cursor-pointer"
+              >
+                <option value="1:1 square">1:1 square</option>
+                <option value="4:5 portrait" selected>4:5 portrait</option>
+                <option value="3:4 portrait">3:4 portrait</option>
+                <option value="9:16 story">9:16 story</option>
+                <option value="16:9 landscape">16:9 landscape</option>
+                <option value="3:2 landscape">3:2 landscape</option>
+              </select>
+              <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3.5 text-slate-400">
+                <i data-lucide="chevron-down" class="w-4 h-4"></i>
+              </div>
+            </div>
+            <p id="error-ratio" class="hidden mt-1.5 text-xs text-rose-400"></p>
+          </div>
+
+          <!-- Submit Action -->
+          <div class="pt-2">
+            <button
+              type="submit"
+              id="btn-generate"
+              class="w-full flex items-center justify-center gap-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-semibold text-sm px-5 py-3.5 shadow-lg shadow-violet-600/25 border border-violet-400/20 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <i data-lucide="wand-2" id="icon-generate" class="w-4 h-4"></i>
+              <svg id="spinner-generate" class="hidden animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <span id="text-generate">Generate Prompt</span>
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Right Column: Output Preview -->
+      <section class="lg:col-span-6 bg-obsidian-900 border border-slate-800/80 rounded-2xl shadow-xl shadow-black/30 overflow-hidden flex flex-col lg:sticky lg:top-24">
+        <!-- Output Top Bar -->
+        <div class="px-5 sm:px-6 py-4 border-b border-slate-800/80 flex flex-wrap items-center justify-between gap-3 bg-obsidian-850/40">
+          <!-- Mode Tabs -->
+          <div class="inline-flex p-1 rounded-xl bg-obsidian-950 border border-slate-800">
+            <button
+              type="button"
+              id="tab-json"
+              class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium bg-violet-600 text-white shadow-sm transition-all cursor-pointer"
+            >
+              <i data-lucide="braces" class="w-3.5 h-3.5"></i>
+              <span>JSON View</span>
+            </button>
+            <button
+              type="button"
+              id="tab-prompt"
+              class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white transition-all cursor-pointer"
+            >
+              <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+              <span>Prompt View</span>
+            </button>
+          </div>
+
+          <!-- Copy Buttons -->
+          <div class="flex items-center gap-2">
+            <button
+              type="button"
+              id="btn-copy-json"
+              disabled
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-obsidian-800 hover:bg-slate-700 text-slate-200 border border-slate-700/80 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <i data-lucide="copy" class="w-3.5 h-3.5 text-violet-400"></i>
+              <span>Copy JSON</span>
+            </button>
+            <button
+              type="button"
+              id="btn-copy-prompt"
+              disabled
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-obsidian-800 hover:bg-slate-700 text-slate-200 border border-slate-700/80 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <i data-lucide="clipboard-check" class="w-3.5 h-3.5 text-emerald-400"></i>
+              <span>Copy Prompt</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Output Content Body -->
+        <div class="p-5 sm:p-6 min-h-[420px] flex flex-col justify-between">
+          <!-- State 1: Empty / Initial State -->
+          <div id="output-empty-state" class="flex-1 flex flex-col items-center justify-center text-center py-12 px-4">
+            <div class="w-14 h-14 rounded-2xl bg-obsidian-850 border border-slate-800 flex items-center justify-center mb-4 text-violet-400">
+              <i data-lucide="terminal" class="w-7 h-7"></i>
+            </div>
+            <h3 class="text-base font-semibold text-white mb-1.5">Ready to Generate Master Prompt</h3>
+            <p class="text-sm text-slate-400 max-w-sm leading-relaxed">
+              Fill in your subject, headline, and creative parameters on the left, then click <span class="text-violet-400 font-medium">Generate Prompt</span> to render the structured JSON template.
+            </p>
+          </div>
+
+          <!-- State 2: Loading State -->
+          <div id="output-loading-state" class="hidden flex-1 flex flex-col items-center justify-center text-center py-12 px-4">
+            <div class="relative w-14 h-14 flex items-center justify-center mb-4">
+              <div class="absolute inset-0 rounded-full border-2 border-violet-500/20"></div>
+              <div class="absolute inset-0 rounded-full border-2 border-t-violet-500 animate-spin"></div>
+              <i data-lucide="sparkles" class="w-6 h-6 text-violet-400 animate-pulse"></i>
+            </div>
+            <h3 class="text-base font-semibold text-white mb-1">Generating Structured Prompt...</h3>
+            <p class="text-xs text-slate-400">Communicating with master template engine</p>
+          </div>
+
+          <!-- State 3: Error State -->
+          <div id="output-error-state" class="hidden flex-1 flex flex-col items-center justify-center text-center py-10 px-4">
+            <div class="w-14 h-14 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center mb-4 text-rose-400">
+              <i data-lucide="alert-triangle" class="w-7 h-7"></i>
+            </div>
+            <h3 id="api-error-title" class="text-base font-semibold text-white mb-1.5">Failed to Generate Prompt</h3>
+            <p id="api-error-message" class="text-sm text-slate-400 max-w-md mb-5 leading-relaxed">
+              An unexpected error occurred while processing your request.
+            </p>
+
+            <div class="flex flex-wrap items-center justify-center gap-3 mb-5">
+              <button
+                type="button"
+                id="btn-try-again"
+                class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-violet-600 hover:bg-violet-500 text-white shadow-md shadow-violet-600/20 transition-all cursor-pointer"
+              >
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                <span>Try Again</span>
+              </button>
+              <button
+                type="button"
+                id="btn-toggle-error-details"
+                class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium bg-obsidian-850 hover:bg-slate-800 text-slate-300 border border-slate-700 transition-all cursor-pointer"
+              >
+                <span>Show Technical Details</span>
+                <i data-lucide="chevron-down" id="icon-error-details" class="w-3.5 h-3.5 transition-transform"></i>
+              </button>
+            </div>
+
+            <!-- Collapsible Technical Error Details -->
+            <div id="api-error-details-box" class="hidden w-full max-w-lg text-left rounded-xl bg-obsidian-950 border border-rose-500/20 p-3.5 font-mono text-xs text-rose-300 overflow-x-auto">
+              <pre id="api-error-details-text" class="whitespace-pre-wrap break-words"></pre>
+            </div>
+          </div>
+
+          <!-- State 4: Success Result Container -->
+          <div id="output-result-state" class="hidden flex-1 flex flex-col">
+            <!-- JSON View -->
+            <div id="view-json" class="flex-1 flex flex-col">
+              <div class="rounded-xl bg-obsidian-950 border border-slate-800/90 p-4 overflow-x-auto max-h-[540px] overflow-y-auto">
+                <pre id="json-output-code" class="font-mono text-xs sm:text-[13px] leading-relaxed text-slate-200"></pre>
+              </div>
+            </div>
+
+            <!-- Prompt View -->
+            <div id="view-prompt" class="hidden flex-1 space-y-3.5 max-h-[540px] overflow-y-auto pr-1">
+              <!-- Structured sections populated dynamically -->
+            </div>
+
+            <!-- Meta Footer -->
+            <div id="output-meta-bar" class="mt-4 pt-3.5 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
+              <div class="flex items-center gap-1.5">
+                <i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-emerald-400"></i>
+                <span>Generated via <code id="meta-source" class="text-slate-400">master_prompt</code></span>
+              </div>
+              <span id="meta-timestamp"></span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Application Logic -->
+  <script>
+    /**
+     * AI Image Prompt Generator
+     * Connects to Supabase Edge Function using native fetch() without auth headers.
+     */
+    const API_ENDPOINT = "https://axednjikcambzbkxyqpp.supabase.co/functions/v1/generate-image-prompt";
+
+    const ALLOWED_RATIOS = [
+      "1:1 square",
+      "4:5 portrait",
+      "3:4 portrait",
+      "9:16 story",
+      "16:9 landscape",
+      "3:2 landscape"
+    ];
+
+    const MAX_FEATURES = 20;
+    const MAX_FEATURE_LENGTH = 200;
+
+    // Application State
+    const state = {
+      form: {
+        subject: "",
+        headline: "",
+        subheadline: "",
+        background: "",
+        composition: "",
+        style: "",
+        quality: "",
+        ratio: "4:5 portrait"
+      },
+      featureItems: [], // Array of strings
+      isLoading: false,
+      apiError: null,   // { title, message, details }
+      apiResponse: null, // Full response object
+      activeTab: "json" // "json" | "prompt"
+    };
+
+    // DOM Elements
+    const elements = {
+      form: document.getElementById("prompt-form"),
+      subject: document.getElementById("input-subject"),
+      headline: document.getElementById("input-headline"),
+      subheadline: document.getElementById("input-subheadline"),
+      background: document.getElementById("input-background"),
+      composition: document.getElementById("input-composition"),
+      style: document.getElementById("input-style"),
+      quality: document.getElementById("input-quality"),
+      ratio: document.getElementById("input-ratio"),
+
+      featureList: document.getElementById("feature-items-list"),
+      featureEmptyState: document.getElementById("feature-empty-state"),
+      featureCount: document.getElementById("feature-count"),
+      btnAddFeature: document.getElementById("btn-add-feature"),
+
+      validationBanner: document.getElementById("form-validation-banner"),
+      validationMessage: document.getElementById("form-validation-message"),
+      errorSubject: document.getElementById("error-subject"),
+      errorHeadline: document.getElementById("error-headline"),
+      errorFeatures: document.getElementById("error-features"),
+      errorRatio: document.getElementById("error-ratio"),
+
+      btnGenerate: document.getElementById("btn-generate"),
+      iconGenerate: document.getElementById("icon-generate"),
+      spinnerGenerate: document.getElementById("spinner-generate"),
+      textGenerate: document.getElementById("text-generate"),
+      btnResetForm: document.getElementById("btn-reset-form"),
+
+      tabJson: document.getElementById("tab-json"),
+      tabPrompt: document.getElementById("tab-prompt"),
+      btnCopyJson: document.getElementById("btn-copy-json"),
+      btnCopyPrompt: document.getElementById("btn-copy-prompt"),
+
+      outputEmptyState: document.getElementById("output-empty-state"),
+      outputLoadingState: document.getElementById("output-loading-state"),
+      outputErrorState: document.getElementById("output-error-state"),
+      outputResultState: document.getElementById("output-result-state"),
+
+      apiErrorTitle: document.getElementById("api-error-title"),
+      apiErrorMessage: document.getElementById("api-error-message"),
+      btnTryAgain: document.getElementById("btn-try-again"),
+      btnToggleErrorDetails: document.getElementById("btn-toggle-error-details"),
+      iconErrorDetails: document.getElementById("icon-error-details"),
+      apiErrorDetailsBox: document.getElementById("api-error-details-box"),
+      apiErrorDetailsText: document.getElementById("api-error-details-text"),
+
+      viewJson: document.getElementById("view-json"),
+      viewPrompt: document.getElementById("view-prompt"),
+      jsonOutputCode: document.getElementById("json-output-code"),
+      metaSource: document.getElementById("meta-source"),
+      metaTimestamp: document.getElementById("meta-timestamp"),
+
+      toastContainer: document.getElementById("toast-container")
+    };
+
+    /**
+     * Initialize Icons and Event Listeners
+     */
+    function init() {
+      lucide.createIcons();
+      renderFeatureItems();
+      bindEvents();
+    }
+
+    function bindEvents() {
+      // Sync form fields with state
+      const textFields = ["subject", "headline", "subheadline", "background", "composition", "style", "quality", "ratio"];
+      textFields.forEach((field) => {
+        elements[field].addEventListener("input", (e) => {
+          state.form[field] = e.target.value;
+          clearFieldError(field);
+        });
+      });
+
+      // Add feature item
+      elements.btnAddFeature.addEventListener("click", () => {
+        if (state.featureItems.length >= MAX_FEATURES) return;
+        state.featureItems.push("");
+        renderFeatureItems();
+        // Focus newly added input
+        const inputs = elements.featureList.querySelectorAll("input");
+        if (inputs.length > 0) {
+          inputs[inputs.length - 1].focus();
+        }
+      });
+
+      // Form submit
+      elements.form.addEventListener("submit", (e) => {
+        e.preventDefault();
+        handleGeneratePrompt();
+      });
+
+      // Try again button
+      elements.btnTryAgain.addEventListener("click", () => {
+        handleGeneratePrompt();
+      });
+
+      // Reset form
+      elements.btnResetForm.addEventListener("click", () => {
+        if (state.isLoading) return;
+        resetApplication();
+      });
+
+      // Output Tabs
+      elements.tabJson.addEventListener("click", () => switchTab("json"));
+      elements.tabPrompt.addEventListener("click", () => switchTab("prompt"));
+
+      // Copy Buttons
+      elements.btnCopyJson.addEventListener("click", copyJsonToClipboard);
+      elements.btnCopyPrompt.addEventListener("click", copyPromptToClipboard);
+
+      // Toggle Technical Error Details
+      elements.btnToggleErrorDetails.addEventListener("click", () => {
+        const isHidden = elements.apiErrorDetailsBox.classList.contains("hidden");
+        elements.apiErrorDetailsBox.classList.toggle("hidden", !isHidden);
+        elements.iconErrorDetails.style.transform = isHidden ? "rotate(180deg)" : "rotate(0deg)";
+        elements.btnToggleErrorDetails.querySelector("span").textContent = isHidden
+          ? "Hide Technical Details"
+          : "Show Technical Details";
+      });
+    }
+
+    /**
+     * Render Dynamic Feature Items List
+     */
+    function renderFeatureItems() {
+      const count = state.featureItems.length;
+      elements.featureCount.textContent = count;
+      elements.btnAddFeature.disabled = count >= MAX_FEATURES;
+
+      if (count === 0) {
+        elements.featureList.innerHTML = "";
+        elements.featureEmptyState.classList.remove("hidden");
+        return;
+      }
+
+      elements.featureEmptyState.classList.add("hidden");
+      elements.featureList.innerHTML = "";
+
+      state.featureItems.forEach((item, index) => {
+        const row = document.createElement("div");
+        row.className = "flex items-center gap-2 group";
+
+        const inputWrapper = document.createElement("div");
+        inputWrapper.className = "relative flex-1";
+
+        const input = document.createElement("input");
+        input.type = "text";
+        input.value = item;
+        input.maxLength = MAX_FEATURE_LENGTH;
+        input.placeholder = `Feature item #${index + 1} (e.g. Hydrating formula)`;
+        input.className = "w-full rounded-xl bg-obsidian-950 border border-slate-800 pl-3.5 pr-14 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all";
+
+        const charCounter = document.createElement("span");
+        charCounter.className = "absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-mono text-slate-500 pointer-events-none";
+        charCounter.textContent = `${item.length}/${MAX_FEATURE_LENGTH}`;
+
+        input.addEventListener("input", (e) => {
+          const val = e.target.value;
+          state.featureItems[index] = val;
+          charCounter.textContent = `${val.length}/${MAX_FEATURE_LENGTH}`;
+          if (val.length > MAX_FEATURE_LENGTH) {
+            charCounter.classList.add("text-rose-400");
+          } else {
+            charCounter.classList.remove("text-rose-400");
+          }
+          elements.errorFeatures.classList.add("hidden");
+        });
+
+        const removeBtn = document.createElement("button");
+        removeBtn.type = "button";
+        removeBtn.title = "Remove feature";
+        removeBtn.className = "p-2 rounded-xl bg-obsidian-950 hover:bg-rose-500/15 text-slate-400 hover:text-rose-400 border border-slate-800 hover:border-rose-500/30 transition-all cursor-pointer shrink-0";
+        removeBtn.innerHTML = `<i data-lucide="trash-2" class="w-4 h-4"></i>`;
+
+        removeBtn.addEventListener("click", () => {
+          state.featureItems.splice(index, 1);
+          renderFeatureItems();
+        });
+
+        inputWrapper.appendChild(input);
+        inputWrapper.appendChild(charCounter);
+        row.appendChild(inputWrapper);
+        row.appendChild(removeBtn);
+        elements.featureList.appendChild(row);
+      });
+
+      lucide.createIcons();
+    }
+
+    /**
+     * Validate Form Inputs
+     */
+    function validateForm() {
+      let isValid = true;
+      const errors = [];
+
+      // Reset inline errors
+      elements.validationBanner.classList.add("hidden");
+      elements.errorSubject.classList.add("hidden");
+      elements.errorHeadline.classList.add("hidden");
+      elements.errorFeatures.classList.add("hidden");
+      elements.errorRatio.classList.add("hidden");
+
+      elements.subject.classList.remove("border-rose-500");
+      elements.headline.classList.remove("border-rose-500");
+      elements.ratio.classList.remove("border-rose-500");
+
+      // 1. Subject required
+      if (!state.form.subject.trim()) {
+        isValid = false;
+        errors.push("Subject wajib diisi.");
+        elements.errorSubject.classList.remove("hidden");
+        elements.subject.classList.add("border-rose-500");
+      }
+
+      // 2. Headline required
+      if (!state.form.headline.trim()) {
+        isValid = false;
+        errors.push("Headline wajib diisi.");
+        elements.errorHeadline.classList.remove("hidden");
+        elements.headline.classList.add("border-rose-500");
+      }
+
+      // 3. Ratio validation
+      if (!ALLOWED_RATIOS.includes(state.form.ratio)) {
+        isValid = false;
+        errors.push("Aspect ratio harus salah satu dari pilihan yang tersedia.");
+        elements.errorRatio.textContent = "Aspect ratio tidak valid.";
+        elements.errorRatio.classList.remove("hidden");
+        elements.ratio.classList.add("border-rose-500");
+      }
+
+      // 4. Feature Items validation (max 20, max 200 chars each)
+      if (state.featureItems.length > MAX_FEATURES) {
+        isValid = false;
+        errors.push(`Maksimal ${MAX_FEATURES} Feature Items.`);
+        elements.errorFeatures.textContent = `Maksimal ${MAX_FEATURES} Feature Items.`;
+        elements.errorFeatures.classList.remove("hidden");
+      }
+
+      const overLimitIndex = state.featureItems.findIndex((item) => item.length > MAX_FEATURE_LENGTH);
+      if (overLimitIndex !== -1) {
+        isValid = false;
+        errors.push(`Feature item #${overLimitIndex + 1} melebihi batas ${MAX_FEATURE_LENGTH} karakter.`);
+        elements.errorFeatures.textContent = `Feature item #${overLimitIndex + 1} melebihi batas ${MAX_FEATURE_LENGTH} karakter.`;
+        elements.errorFeatures.classList.remove("hidden");
+      }
+
+      if (!isValid) {
+        elements.validationMessage.textContent = errors[0];
+        elements.validationBanner.classList.remove("hidden");
+      }
+
+      return isValid;
+    }
+
+    function clearFieldError(field) {
+      if (field === "subject") {
+        elements.errorSubject.classList.add("hidden");
+        elements.subject.classList.remove("border-rose-500");
+      } else if (field === "headline") {
+        elements.errorHeadline.classList.add("hidden");
+        elements.headline.classList.remove("border-rose-500");
+      } else if (field === "ratio") {
+        elements.errorRatio.classList.add("hidden");
+        elements.ratio.classList.remove("border-rose-500");
+      }
+      elements.validationBanner.classList.add("hidden");
+    }
+
+    /**
+     * Build Request Payload
+     */
+    function buildPayload() {
+      // Clean empty feature strings while preserving user text
+      const cleanedFeatures = state.featureItems
+        .map((item) => item.trim())
+        .filter((item) => item.length > 0);
+
+      return {
+        subject: state.form.subject.trim(),
+        headline: state.form.headline.trim(),
+        subheadline: state.form.subheadline.trim(),
+        feature_items: cleanedFeatures,
+        background: state.form.background.trim(),
+        composition: state.form.composition.trim(),
+        style: state.form.style.trim(),
+        quality: state.form.quality.trim(),
+        ratio: state.form.ratio
+      };
+    }
+
+    /**
+     * Call Supabase Edge Function
+     */
+    async function handleGeneratePrompt() {
+      // Prevent duplicate concurrent requests
+      if (state.isLoading) return;
+
+      // Validate input
+      if (!validateForm()) return;
+
+      const payload = buildPayload();
+
+      setLoadingState(true);
+      state.apiError = null;
+
+      try {
+        const response = await fetch(API_ENDPOINT, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        });
+
+        // Read raw text first to safely handle empty or invalid JSON responses
+        const rawText = await response.text();
+
+        if (!rawText || rawText.trim() === "") {
+          throw createStructuredError(
+            "Empty Server Response",
+            "Server mengembalikan respons kosong. Silakan coba beberapa saat lagi.",
+            `HTTP Status: ${response.status} ${response.statusText}\nResponse Body: <empty>`
+          );
+        }
+
+        let parsedJson;
+        try {
+          parsedJson = JSON.parse(rawText);
+        } catch (parseErr) {
+          throw createStructuredError(
+            "Invalid Response Format",
+            "Format respons dari server bukan JSON yang valid.",
+            `HTTP Status: ${response.status} ${response.statusText}\nParse Error: ${parseErr.message}\nRaw Response: ${rawText.slice(0, 500)}`
+          );
+        }
+
+        // Handle non-2xx HTTP status codes
+        if (!response.ok) {
+          const userFriendlyMsg = mapHttpErrorMessage(response.status, parsedJson);
+          throw createStructuredError(
+            `Request Failed (HTTP ${response.status})`,
+            userFriendlyMsg,
+            `HTTP Status: ${response.status} ${response.statusText}\nResponse: ${JSON.stringify(parsedJson, null, 2)}`
+          );
+        }
+
+        // Verify result.success === true
+        if (!parsedJson || parsedJson.success !== true || !parsedJson.data) {
+          const serverMsg = parsedJson?.error || parsedJson?.message || "Server gagal memproses template prompt.";
+          throw createStructuredError(
+            "Prompt Generation Failed",
+            serverMsg,
+            `Response Payload:\n${JSON.stringify(parsedJson, null, 2)}`
+          );
+        }
+
+        // Success
+        state.apiResponse = parsedJson;
+        renderSuccessOutput(parsedJson);
+        showToast("Prompt generated successfully!", "success");
+
+      } catch (err) {
+        if (err.isStructuredError) {
+          state.apiError = err;
+        } else {
+          // Network error / CORS / offline
+          state.apiError = {
+            title: "Network Connection Error",
+            message: "Tidak dapat terhubung ke server. Periksa koneksi internet Anda lalu coba lagi.",
+            details: `Error Name: ${err.name || "Error"}\nMessage: ${err.message || "Failed to fetch"}`
+          };
+        }
+        renderErrorOutput(state.apiError);
+      } finally {
+        setLoadingState(false);
+      }
+    }
+
+    function createStructuredError(title, message, details) {
+      const error = new Error(message);
+      error.isStructuredError = true;
+      error.title = title;
+      error.details = details;
+      return error;
+    }
+
+    function mapHttpErrorMessage(status, body) {
+      const backendMessage = body?.error || body?.message;
+      switch (status) {
+        case 400:
+          return backendMessage || "Data input tidak valid (Bad Request). Periksa kembali isian form Anda.";
+        case 404:
+          return "Endpoint layanan prompt tidak ditemukan (HTTP 404).";
+        case 413:
+          return "Ukuran data yang dikirim terlalu besar (HTTP 413). Kurangi panjang teks Anda.";
+        case 500:
+        case 502:
+        case 503:
+          return "Terjadi gangguan internal pada server (HTTP 500). Silakan coba lagi nanti.";
+        default:
+          return backendMessage || `Terjadi kesalahan saat berkomunikasi dengan server (HTTP ${status}).`;
+      }
+    }
+
+    /**
+     * UI State Transitions
+     */
+    function setLoadingState(loading) {
+      state.isLoading = loading;
+      elements.btnGenerate.disabled = loading;
+      elements.btnResetForm.disabled = loading;
+
+      if (loading) {
+        elements.iconGenerate.classList.add("hidden");
+        elements.spinnerGenerate.classList.remove("hidden");
+        elements.textGenerate.textContent = "Generating...";
+
+        elements.outputEmptyState.classList.add("hidden");
+        elements.outputErrorState.classList.add("hidden");
+        elements.outputResultState.classList.add("hidden");
+        elements.outputLoadingState.classList.remove("hidden");
+      } else {
+        elements.iconGenerate.classList.remove("hidden");
+        elements.spinnerGenerate.classList.add("hidden");
+        elements.textGenerate.textContent = "Generate Prompt";
+        elements.outputLoadingState.classList.add("hidden");
+      }
+    }
+
+    function renderErrorOutput(errObj) {
+      elements.outputEmptyState.classList.add("hidden");
+      elements.outputLoadingState.classList.add("hidden");
+      elements.outputResultState.classList.add("hidden");
+      elements.outputErrorState.classList.remove("hidden");
+
+      elements.btnCopyJson.disabled = true;
+      elements.btnCopyPrompt.disabled = true;
+
+      elements.apiErrorTitle.textContent = errObj.title || "Error";
+      elements.apiErrorMessage.textContent = errObj.message || "Terjadi kesalahan.";
+      elements.apiErrorDetailsText.textContent = errObj.details || "No technical details available.";
+
+      // Collapse details by default on new error
+      elements.apiErrorDetailsBox.classList.add("hidden");
+      elements.iconErrorDetails.style.transform = "rotate(0deg)";
+      elements.btnToggleErrorDetails.querySelector("span").textContent = "Show Technical Details";
+    }
+
+    function renderSuccessOutput(responseObj) {
+      const data = responseObj.data;
+
+      elements.outputEmptyState.classList.add("hidden");
+      elements.outputLoadingState.classList.add("hidden");
+      elements.outputErrorState.classList.add("hidden");
+      elements.outputResultState.classList.remove("hidden");
+
+      elements.btnCopyJson.disabled = false;
+      elements.btnCopyPrompt.disabled = false;
+
+      // 1. Populate JSON View with syntax highlighting
+      const formattedJson = JSON.stringify(data, null, 2);
+      elements.jsonOutputCode.innerHTML = syntaxHighlightJson(formattedJson);
+
+      // 2. Populate Human-Readable Prompt View
+      renderPromptView(data);
+
+      // 3. Populate Meta Info if present
+      if (responseObj.meta) {
+        elements.metaSource.textContent = responseObj.meta.template_source || "master_prompt";
+        if (responseObj.meta.rendered_at) {
+          try {
+            const date = new Date(responseObj.meta.rendered_at);
+            elements.metaTimestamp.textContent = date.toLocaleString();
+          } catch {
+            elements.metaTimestamp.textContent = responseObj.meta.rendered_at;
+          }
+        }
+      }
+    }
+
+    /**
+     * Syntax Highlight JSON safely
+     */
+    function syntaxHighlightJson(jsonStr) {
+      const escaped = jsonStr
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+
+      return escaped.replace(
+        /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+        (match) => {
+          let cls = "json-number";
+          if (/^"/.test(match)) {
+            if (/:$/.test(match)) {
+              cls = "json-key";
+            } else {
+              cls = "json-string";
+            }
+          } else if (/true|false/.test(match)) {
+            cls = "json-boolean";
+          } else if (/null/.test(match)) {
+            cls = "json-null";
+          }
+          return `<span class="${cls}">${match}</span>`;
+        }
+      );
+    }
+
+    /**
+     * Render Structured Prompt View from result.data
+     */
+    function renderPromptView(data) {
+      const sections = [
+        { label: "Subject", value: data.subject, icon: "box" },
+        { label: "Headline", value: data.headline, icon: "type" },
+        { label: "Subheadline", value: data.subheadline, icon: "align-left" },
+        { label: "Feature Items", value: data.feature_items, icon: "list-checks", isList: true },
+        { label: "Background", value: data.background, icon: "image" },
+        { label: "Composition", value: data.composition, icon: "layout-template" },
+        { label: "Style", value: data.style, icon: "palette" },
+        { label: "Quality", value: data.quality, icon: "sparkles" },
+        { label: "Aspect Ratio", value: data.ratio, icon: "maximize-2" }
+      ];
+
+      elements.viewPrompt.innerHTML = "";
+
+      sections.forEach((sec) => {
+        const card = document.createElement("div");
+        card.className = "rounded-xl bg-obsidian-950/90 border border-slate-800/90 p-3.5 transition-colors hover:border-slate-700";
+
+        const header = document.createElement("div");
+        header.className = "flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-violet-400 mb-1.5";
+        header.innerHTML = `<i data-lucide="${sec.icon}" class="w-3.5 h-3.5"></i><span>${sec.label}</span>`;
+        card.appendChild(header);
+
+        if (sec.isList) {
+          const items = Array.isArray(sec.value) ? sec.value : [];
+          if (items.length === 0) {
+            const emptyText = document.createElement("p");
+            emptyText.className = "text-xs text-slate-500 italic";
+            emptyText.textContent = "None specified";
+            card.appendChild(emptyText);
+          } else {
+            const ul = document.createElement("ul");
+            ul.className = "space-y-1.5 mt-1";
+            items.forEach((item) => {
+              const li = document.createElement("li");
+              li.className = "flex items-start gap-2 text-sm text-slate-200";
+              li.innerHTML = `<span class="text-violet-400 mt-1">â€¢</span><span>${escapeHtml(String(item))}</span>`;
+              ul.appendChild(li);
+            });
+            card.appendChild(ul);
+          }
+        } else {
+          const content = document.createElement("p");
+          const hasValue = sec.value !== undefined && sec.value !== null && String(sec.value).trim() !== "";
+          content.className = hasValue ? "text-sm text-slate-200 leading-relaxed whitespace-pre-wrap" : "text-xs text-slate-500 italic";
+          content.textContent = hasValue ? String(sec.value) : "Not specified";
+          card.appendChild(content);
+        }
+
+        elements.viewPrompt.appendChild(card);
+      });
+
+      lucide.createIcons();
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement("div");
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    /**
+     * Switch Between JSON View and Prompt View
+     */
+    function switchTab(tab) {
+      state.activeTab = tab;
+
+      if (tab === "json") {
+        elements.tabJson.className = "inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium bg-violet-600 text-white shadow-sm transition-all cursor-pointer";
+        elements.tabPrompt.className = "inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white transition-all cursor-pointer";
+        elements.viewJson.classList.remove("hidden");
+        elements.viewPrompt.classList.add("hidden");
+      } else {
+        elements.tabPrompt.className = "inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium bg-violet-600 text-white shadow-sm transition-all cursor-pointer";
+        elements.tabJson.className = "inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white transition-all cursor-pointer";
+        elements.viewPrompt.classList.remove("hidden");
+        elements.viewJson.classList.add("hidden");
+      }
+    }
+
+    /**
+     * Copy JSON (result.data) to Clipboard
+     */
+    function copyJsonToClipboard() {
+      if (!state.apiResponse || !state.apiResponse.data) return;
+      const jsonText = JSON.stringify(state.apiResponse.data, null, 2);
+      copyTextFallbackSafe(jsonText, "JSON copied to clipboard!");
+    }
+
+    /**
+     * Copy Formatted Structured Prompt to Clipboard
+     */
+    function copyPromptToClipboard() {
+      if (!state.apiResponse || !state.apiResponse.data) return;
+      const d = state.apiResponse.data;
+      const featuresFormatted = Array.isArray(d.feature_items) && d.feature_items.length > 0
+        ? d.feature_items.map((item) => `- ${item}`).join("\n")
+        : "-";
+
+      const structuredPrompt = [
+        `Subject: ${d.subject || "-"}`,
+        `Headline: ${d.headline || "-"}`,
+        `Subheadline: ${d.subheadline || "-"}`,
+        `Feature Items:\n${featuresFormatted}`,
+        `Background: ${d.background || "-"}`,
+        `Composition: ${d.composition || "-"}`,
+        `Style: ${d.style || "-"}`,
+        `Quality: ${d.quality || "-"}`,
+        `Aspect Ratio: ${d.ratio || "-"}`
+      ].join("\n\n");
+
+      copyTextFallbackSafe(structuredPrompt, "Structured prompt copied to clipboard!");
+    }
+
+    /**
+     * Reliable Clipboard Copy using execCommand with navigator fallback
+     */
+    function copyTextFallbackSafe(text, successMessage) {
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.style.position = "fixed";
+      textarea.style.top = "-9999px";
+      textarea.style.left = "-9999px";
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+
+      let copied = false;
+      try {
+        copied = document.execCommand("copy");
+      } catch (err) {
+        copied = false;
+      }
+      document.body.removeChild(textarea);
+
+      if (copied) {
+        showToast(successMessage, "success");
+      } else if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text)
+          .then(() => showToast(successMessage, "success"))
+          .catch(() => showToast("Failed to copy to clipboard.", "error"));
+      } else {
+        showToast("Failed to copy to clipboard.", "error");
+      }
+    }
+
+    /**
+     * Reset Form and Output States
+     */
+    function resetApplication() {
+      state.form = {
+        subject: "",
+        headline: "",
+        subheadline: "",
+        background: "",
+        composition: "",
+        style: "",
+        quality: "",
+        ratio: "4:5 portrait"
+      };
+      state.featureItems = [];
+      state.apiError = null;
+      state.apiResponse = null;
+
+      elements.form.reset();
+      elements.ratio.value = "4:5 portrait";
+      renderFeatureItems();
+
+      // Clear validation errors
+      elements.validationBanner.classList.add("hidden");
+      elements.errorSubject.classList.add("hidden");
+      elements.errorHeadline.classList.add("hidden");
+      elements.errorFeatures.classList.add("hidden");
+      elements.errorRatio.classList.add("hidden");
+      elements.subject.classList.remove("border-rose-500");
+      elements.headline.classList.remove("border-rose-500");
+      elements.ratio.classList.remove("border-rose-500");
+
+      // Reset Output Panel
+      elements.outputLoadingState.classList.add("hidden");
+      elements.outputErrorState.classList.add("hidden");
+      elements.outputResultState.classList.add("hidden");
+      elements.outputEmptyState.classList.remove("hidden");
+
+      elements.btnCopyJson.disabled = true;
+      elements.btnCopyPrompt.disabled = true;
+
+      showToast("Form has been reset.", "info");
+    }
+
+    /**
+     * Show Toast Notification
+     */
+    function showToast(message, type = "success") {
+      const toast = document.createElement("div");
+      const iconName = type === "success" ? "check-circle-2" : type === "error" ? "alert-circle" : "info";
+      const accentClasses =
+        type === "success"
+          ? "border-emerald-500/40 bg-obsidian-900/95 text-emerald-200"
+          : type === "error"
+          ? "border-rose-500/40 bg-obsidian-900/95 text-rose-200"
+          : "border-violet-500/40 bg-obsidian-900/95 text-violet-200";
+      const iconColor =
+        type === "success" ? "text-emerald-400" : type === "error" ? "text-rose-400" : "text-violet-400";
+
+      toast.className = `pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-xl border shadow-2xl backdrop-blur-md text-xs font-medium transition-all duration-300 translate-y-2 opacity-0 ${accentClasses}`;
+      toast.innerHTML = `
+        <i data-lucide="${iconName}" class="w-4 h-4 ${iconColor} shrink-0"></i>
+        <span>${escapeHtml(message)}</span>
+      `;
+
+      elements.toastContainer.appendChild(toast);
+      lucide.createIcons();
+
+      requestAnimationFrame(() => {
+        toast.classList.remove("translate-y-2", "opacity-0");
+      });
+
+      setTimeout(() => {
+        toast.classList.add("translate-y-2", "opacity-0");
+        setTimeout(() => {
+          toast.remove();
+        }, 300);
+      }, 3000);
+    }
+
+    // Boot application
+    document.addEventListener("DOMContentLoaded", init);
+  </script>
+</body>
+</html>
