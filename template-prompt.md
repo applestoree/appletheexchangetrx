@@ -9,7 +9,7 @@
 
 This file defines the reusable master template used to transform the application's input payload into a complete, production-ready image-generation prompt.
 
-The backend consumer is expected to load this file as an external source. Do not assume this template is active merely because the file exists; the backend must fetch, parse, and apply it.
+The frontend application in `index.html` loads this file as an external source using HTTP GET, extracts the fenced `text` master prompt, and resolves its variables in the browser. The template is active in the frontend flow only when that fetch and render operation succeeds.
 
 ## 2. Variable Contract
 
@@ -97,7 +97,7 @@ FINAL CONSTRAINTS
 
 ## 4. Expected Input Payload
 
-The current frontend sends this JSON shape to the `generate-image-prompt` Edge Function:
+The frontend builds this JSON-shaped payload locally from the validated form fields before resolving the template:
 
 ```json
 {
@@ -118,14 +118,14 @@ This is a documentation of the observed frontend request contract. Do not rename
 ## 5. Expected Processing Flow
 
 1. The frontend collects and validates the input fields.
-2. The frontend sends the payload to the `generate-image-prompt` Edge Function.
-3. The backend loads this file from the Raw URL:
+2. The frontend builds the payload using the variable contract in Section 2.
+3. The browser fetches this file from the Raw URL with HTTP GET:
    `https://raw.githubusercontent.com/applestoree/appletheexchangetrx/main/template-prompt.md`
-4. The backend resolves the variables using the received payload.
-5. The backend validates that required variables are present and no unresolved placeholders remain.
-6. The backend returns the generated structured data expected by the frontend.
+4. The frontend extracts the fenced `text` master prompt and resolves the variables locally.
+5. The frontend verifies that no unresolved placeholders remain.
+6. The frontend displays the resolved prompt and keeps the input payload available in JSON View.
 
-The actual backend response contract must be preserved from the existing Edge Function implementation. This document does not redefine that response schema.
+The current frontend generation flow does not depend on an Edge Function response contract. The Edge Function may remain deployed independently, but it is not called by `index.html`.
 
 ## 6. Validation Checklist
 
