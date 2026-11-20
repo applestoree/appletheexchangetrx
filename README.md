@@ -91,6 +91,19 @@ When working with an external source:
 - Do not create unused, duplicate, orphaned, or unreachable source files.
 - If a file is intentionally reference-only and is not loaded by the application, identify it explicitly as documentation/reference material rather than implying it is integrated.
 
+### 4.1.1 Mandatory repository-wide Raw GET connectivity
+
+**`index.html` must connect to every other file in this repository that belongs to the application through that file's GitHub Raw URL, using HTTP GET.** This is a mandatory project requirement for future audits and implementation.
+
+- Do not leave application files disconnected, orphaned, or unused.
+- For each repository file (other than `index.html` itself), identify its purpose and ensure `index.html` retrieves its content from the corresponding GitHub Raw URL with HTTP GET.
+- Construct each Raw URL from the repository owner, repository name, branch, and exact file path. Do not guess filenames or URLs.
+- Maintain a complete file-to-Raw-URL connection map in this README, including each file's purpose and connection status.
+- When a file is added, renamed, moved, or deleted, update the Raw GET references in `index.html` and the connection map so they remain synchronized.
+- Do not assume that merely listing a Raw URL in the README means the file is connected; verify that `index.html` actually issues the GET request and uses the returned content.
+- If a repository file cannot reasonably be loaded or consumed by `index.html` (for example, the application entry file itself or a non-text/binary asset), do not silently omit it. Record the exact reason and its handling in the connection map, and flag it during an audit.
+
+
 ### 4.2 Define the connection for each feature
 
 Before implementing a feature, identify its file flow:
@@ -295,7 +308,8 @@ When continuing this project:
 
 1. Read this README.
 2. Inspect the relevant repository files to understand current facts; do not assume undocumented files exist.
-3. Identify whether the requested work concerns an external source, frontend runtime, or backend.
+3. Audit repository-wide file connectivity: every file other than `index.html` that belongs to the application must be fetched by `index.html` through its GitHub Raw URL using HTTP GET, or have its exception explicitly documented in the connection map.
+4. Identify whether the requested work concerns an external source, frontend runtime, or backend.
 4. Create or edit external-source files when the task concerns reusable AI instructions or reference content.
 5. Edit `index.html` when the task requires frontend UI, logic, runtime integration, or loading an external source.
 6. Follow the five **Mandatory Gemini Canvas architecture rules** in Section 6. Gemini AI is built into Canvas; do not implement a custom Gemini API, API key, JavaScript integration, or Gemini-specific backend in `index.html`.
