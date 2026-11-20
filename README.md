@@ -15,10 +15,11 @@ A key project convention is to keep reusable AI instructions and other externall
 - **Main application file:** `index.html`
 - **Application name in source:** AI Image Prompt Generator
 - **Target environment:** Gemini Canvas
-- **Intended AI runtime:** Gemini Canvas app runtime, using the Gemini-powered capability added through Canvas's **Add Gemini features** workflow; no user-provided API key.
-- **Runtime assumption approved by the user:** after Gemini features are added to this Canvas app, the generated app JavaScript can call the Canvas-provided Gemini capability. The app will use that capability to generate `subject` from the instructions loaded from `ai-subject-strategist.md`.
+- **AI execution:** Gemini AI is provided by the Gemini Canvas environment itself.
+- **Subject instruction source:** `ai-subject-strategist.md`.
+- **Master prompt source:** `template-prompt.md`.
 
-The current `index.html` fetches `template-prompt.md` from GitHub Raw and renders the master prompt in browser JavaScript. Gemini Canvas is the target execution environment. The project requirement is to use Gemini Canvas's **Add Gemini features** capability so the Canvas app can invoke Gemini-powered text generation from its own JavaScript runtime, without asking the user for a separate API key. The exact runtime bridge/function signature must be taken from the code that Gemini Canvas generates when this feature is added; do not invent an API name or claim the integration is implemented until that generated code is inspected.
+The user has explicitly defined the architecture: Gemini Canvas already provides Gemini AI to the Canvas app. The app uses that built-in capability; `index.html` does not implement a separate Gemini integration. The role of `index.html` is to use the generated `subject` and combine it with the master prompt from `template-prompt.md`.
 
 ## 3. File Editing Policy
 
@@ -146,8 +147,8 @@ Do not mark an integration as verified without checking the actual code or runni
 |---|---|---|---|---|
 | `index.html` | Input UI, validation, fetches the master template, resolves variables, and renders/copies output | `template-prompt.md` | HTTP GET to GitHub Raw; variable resolution in browser JavaScript | Implemented in source; live Canvas runtime fetch is not independently tested |
 | `template-prompt.md` | Variable-based master image prompt template | `index.html` | HTTP GET to GitHub Raw | Source created and wired as the frontend template source |
-| `ai-subject-strategist.md` | AI role and rules to generate `subject` only | `index.html` + Gemini Canvas AI capability | Planned: HTTP GET to GitHub Raw, then pass loaded instructions and product context to the Canvas-provided Gemini text-generation capability | Planned; file and integration not yet implemented |
-| Gemini Canvas AI capability | Generate text (`subject`) within the Canvas app | `index.html` | Canvas **Add Gemini features** workflow; use the actual generated runtime call/bridge | Capability documented by Google; exact generated app code/signature not yet inspected |
+| `ai-subject-strategist.md` | Instructions and strategy for Gemini to generate `subject` only | Gemini AI built into Gemini Canvas | Used as the AI instruction source in the Canvas workflow; no Gemini API call is implemented in `index.html` | Planned; file not yet created |
+| Gemini Canvas AI | Automatically generate the `subject` using its built-in AI capability | Gemini Canvas app workflow | Native Canvas capability; not a custom JavaScript/API integration in `index.html` | Available as the target environment capability; app workflow not yet verified |
 | `README.md` | Project rules, architecture notes, integration map | Project contributors and AI assistants | Repository documentation | Reference/documentation |
 
 ### Current template source
@@ -180,46 +181,50 @@ Expected Raw URL:
 https://raw.githubusercontent.com/applestoree/appletheexchangetrx/main/ai-subject-strategist.md
 ```
 
-Intended data flow:
+### Mandatory Gemini Canvas architecture rules
+
+These five rules are explicit user requirements. They are authoritative for every future repository audit, analysis, and implementation. Do not ask the user to explain or reconfirm them.
+
+1. **`index.html` runs inside Gemini Canvas.** It is the application code for a Gemini Canvas app, not a standalone website that must independently connect to Gemini.
+2. **Gemini AI is built into the Gemini Canvas environment.** Treat it as a native capability available to the Canvas app.
+3. **The Canvas app uses Gemini AI directly as a built-in Canvas capability.** Do not reinterpret this architecture as a requirement to create a separate Gemini integration in application code.
+4. **Do not implement a custom Gemini integration in `index.html`.** No direct Gemini API request, API key, custom Gemini JavaScript client/bridge, or Supabase Edge Function is required to access Gemini AI. Do not invent an API name or runtime function.
+5. **The subject-to-template responsibility is fixed:** `ai-subject-strategist.md` contains the instructions for Gemini to generate `subject` automatically. The resulting `subject` is then used by `index.html` with `template-prompt.md` to assemble the final image-generation prompt. The strategist generates `subject` only; it does not replace `headline`, `subheadline`, or `feature_items`.
+
+### Intended responsibility flow
 
 ```text
-User product/context inputs
+Gemini Canvas built-in Gemini AI
         │
-        ▼
-index.html — HTTP GET ai-subject-strategist.md
-        │
-        ▼
-Gemini Canvas-provided text-generation capability
-        │  instructions + user context
+        │ follows instructions in ai-subject-strategist.md
         ▼
 subject (text only)
         │
         ▼
-index.html — HTTP GET template-prompt.md
+index.html
+        │
+        │ uses subject + existing input values
+        ▼
+HTTP GET template-prompt.md
         │
         ▼
-Resolve {{subject}} and other existing template variables
+Resolve the existing template variables
         │
         ▼
 Final image-generation prompt
 ```
 
-### Gemini Canvas runtime assumption and boundary
+### Explicit implementation boundary
 
-The user explicitly approves the implementation assumption that the Gemini Canvas app runtime exposes a Gemini-powered capability callable from the JavaScript of the Canvas app after the app's **Add Gemini features** capability has been enabled. `index.html` is intended to run as the app code inside Gemini Canvas, not as a separately hosted generic website.
+- Gemini AI belongs to the Gemini Canvas environment. It is not a custom API dependency of `index.html`.
+- Do not add a Gemini API key, direct Gemini API request, custom JavaScript Gemini invocation, or Gemini-specific backend function.
+- Do not require inspection of a generated Gemini JavaScript bridge as a prerequisite for following this architecture.
+- Keep `ai-subject-strategist.md` as the single source of truth for the subject-generation role and instructions.
+- Keep `template-prompt.md` as the single source of truth for the final prompt template.
+- `index.html` is responsible for using the generated `subject` in the existing template-rendering flow.
+- If a future request appears to conflict with these rules, follow the user's latest explicit instruction; otherwise, do not silently change this architecture.
 
-Google's official Gemini Apps Help documents that users can add Gemini-powered features, including text and image generation, to a Canvas app through **Add Gemini features**. It does not document a stable public JavaScript API name or function signature in that help article. Therefore:
-
-- Treat Canvas-provided Gemini text generation as the intended runtime mechanism, not an external Gemini API key or a new Supabase Edge Function.
-- When implementing, enable/add Gemini features to this Canvas app and inspect the actual generated JavaScript/runtime bridge that Canvas inserts.
-- Call the actual Canvas-generated mechanism from `index.html`; do not invent names such as `gemini.generateContent()` or assume a generic global exists without evidence in the generated app code.
-- The Canvas AI call must receive the fetched strategist instructions and the relevant user inputs, and return a plain-text `subject` for the existing prompt pipeline.
-- If Canvas has not yet injected/provided its AI runtime capability, automatic subject generation is unavailable until the feature is added. Do not silently fall back to a manual prompt or claim generation succeeded.
-- Never place a private API key in client-side source.
-
-Official reference: [Google Gemini Apps Help — Create docs, apps & more with Canvas](https://support.google.com/gemini/answer/16047321?hl=en), section **Add AI to your app**. The guide confirms Canvas can add Gemini-powered text/image generation, but the exact generated code must be inspected in the target app.
-
-This flow is **planned**, not yet implemented. The strategist file must be created and the actual Canvas-generated runtime integration verified before this map entry can be marked implemented.
+This architecture is the approved project requirement and must be used as the baseline during repository audits.
 
 ## 7. Source of Truth and Conflict Handling
 
@@ -280,11 +285,9 @@ This section documents observed behavior; it does not restrict future changes ex
 
 ## 9. Runtime Integration Rules
 
-The app is intended to run as code inside Gemini Canvas. Its automatic subject-generation path must use the Gemini-powered runtime capability added through Canvas **Add Gemini features**, based on the user's approved assumption that this capability is callable by the app's JavaScript.
+This application runs inside Gemini Canvas and uses the Gemini AI capability built into that environment. Follow the five **Mandatory Gemini Canvas architecture rules** in Section 6.
 
-Do not replace this with a direct Google Gemini API request that requires a user-managed API key, or with the previous `generate-image-prompt` Supabase Edge Function, unless the user explicitly changes the architecture. The existing `template-prompt.md` loading and variable-resolution flow remains a separate browser-side step.
-
-The actual JavaScript invocation is implementation-dependent: inspect the code generated by Canvas after enabling **Add Gemini features**, then use that exact callable interface. The official help article confirms that Canvas can add Gemini-powered text and image generation, but does not specify the runtime API signature. Keep the implementation aligned with the generated Canvas code and verify it in the Canvas preview.
+In particular, do not add a custom Gemini integration to `index.html`: no direct Gemini API call, API key, custom JavaScript Gemini client/bridge, or Gemini-specific Edge Function. Gemini generates `subject` according to `ai-subject-strategist.md`; `index.html` uses that subject with `template-prompt.md` to assemble the final prompt. Only change this architecture if the user explicitly instructs you to do so.
 
 ## 10. Instructions for AI Assistants
 
@@ -295,7 +298,7 @@ When continuing this project:
 3. Identify whether the requested work concerns an external source, frontend runtime, or backend.
 4. Create or edit external-source files when the task concerns reusable AI instructions or reference content.
 5. Edit `index.html` when the task requires frontend UI, logic, runtime integration, or loading an external source.
-6. For subject generation, use the Gemini Canvas-provided text-generation capability added through **Add Gemini features**; inspect and reuse the actual generated runtime call rather than inventing an API signature. Do not add a backend or API key unless the user changes the architecture.
+6. Follow the five **Mandatory Gemini Canvas architecture rules** in Section 6. Gemini AI is built into Canvas; do not implement a custom Gemini API, API key, JavaScript integration, or Gemini-specific backend in `index.html`.
 7. Keep each external source focused on one role or purpose. For example, subject-generation strategy belongs in `ai-subject-strategist.md`.
 8. Preserve filenames and established schemas unless the user requests a change.
 9. Do not duplicate large external instructions in `index.html` when they can be loaded from their source file.
@@ -316,7 +319,7 @@ When continuing this project:
 
 ## 11. Suggested Starting Instruction for a New AI Session
 
-> Read `README.md` and inspect the relevant repository files before working. This project runs `index.html` inside Gemini Canvas. The approved design uses Canvas **Add Gemini features** for Gemini-powered text generation, with the Canvas-generated runtime call inspected and reused rather than an invented API signature or user-provided API key. `index.html` loads reusable AI instructions such as `ai-subject-strategist.md` and the master prompt `template-prompt.md` from GitHub Raw. The strategist generates `subject` only. You may edit the relevant external sources and `index.html`; do not modify unrelated files or expand scope. Verify the Canvas runtime integration and end-to-end behavior before reporting completion.
+> Read `README.md` before auditing or changing this repository. This project runs `index.html` inside Gemini Canvas, where Gemini AI is a built-in capability. Do not implement a separate Gemini integration, Gemini API request, API key, custom JavaScript Gemini bridge, or Gemini-specific Edge Function in `index.html`. Follow the five mandatory architecture rules in Section 6: Gemini uses `ai-subject-strategist.md` to generate `subject` only, and `index.html` uses that subject with `template-prompt.md` to assemble the final prompt. Inspect the actual repository files, preserve existing names and behavior, and do not expand scope.
 
 ---
 
