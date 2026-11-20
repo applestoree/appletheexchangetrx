@@ -140,6 +140,26 @@
             </p>
           </div>
 
+          <!-- Subject Strategist Instructions -->
+          <div class="rounded-xl border border-violet-500/20 bg-violet-500/5 p-3.5 space-y-2">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div>
+                <p class="text-xs font-semibold text-violet-200">Gemini Canvas Subject Strategist</p>
+                <p id="subject-strategist-status" class="text-[11px] text-slate-400 mt-1">Loading strategist instructions from GitHub Raw...</p>
+              </div>
+              <button
+                type="button"
+                id="btn-copy-subject-strategist"
+                disabled
+                class="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-white bg-violet-600/70 hover:bg-violet-500 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              >
+                <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                <span>Copy Gemini Instructions</span>
+              </button>
+            </div>
+            <p class="text-[11px] leading-relaxed text-slate-400">Salin instruksi ini, gunakan di Gemini Canvas untuk menghasilkan subject, lalu tempel hasilnya ke kolom Subject. Gemini berjalan melalui kemampuan native Canvas, bukan dipanggil oleh kode aplikasi.</p>
+          </div>
+
           <!-- Headline (Required) & Subheadline -->
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -448,6 +468,7 @@
      * Loads the master prompt template directly from GitHub Raw using HTTP GET.
      */
     const TEMPLATE_URL = "https://raw.githubusercontent.com/applestoree/appletheexchangetrx/main/template-prompt.md";
+    const SUBJECT_STRATEGIST_URL = "https://raw.githubusercontent.com/applestoree/appletheexchangetrx/main/ai-subject-strategist.md";
 
     const ALLOWED_RATIOS = [
       "1:1 square",
@@ -477,13 +498,16 @@
       isLoading: false,
       apiError: null,   // { title, message, details }
       apiResponse: null, // Full response object
-      activeTab: "json" // "json" | "prompt"
+      activeTab: "json", // "json" | "prompt"
+      subjectStrategistPrompt: ""
     };
 
     // DOM Elements
     const elements = {
       form: document.getElementById("prompt-form"),
       subject: document.getElementById("input-subject"),
+      subjectStrategistStatus: document.getElementById("subject-strategist-status"),
+      btnCopySubjectStrategist: document.getElementById("btn-copy-subject-strategist"),
       headline: document.getElementById("input-headline"),
       subheadline: document.getElementById("input-subheadline"),
       background: document.getElementById("input-background"),
@@ -540,10 +564,45 @@
     /**
      * Initialize Icons and Event Listeners
      */
-    function init() {
+    async function init() {
       lucide.createIcons();
       renderFeatureItems();
       bindEvents();
+      await loadSubjectStrategist();
+    }
+
+    /**
+     * Load the subject strategist instructions from GitHub Raw using HTTP GET.
+     * This makes the Canvas-native Gemini instructions available to copy;
+     * it does not invoke Gemini or generate a subject from application code.
+     */
+    async function loadSubjectStrategist() {
+      try {
+        const response = await fetch(SUBJECT_STRATEGIST_URL, {
+          method: "GET",
+          headers: { "Accept": "text/markdown, text/plain;q=0.9, */*;q=0.8" },
+          cache: "no-cache"
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status} ${response.statusText}`);
+        }
+
+        const markdown = await response.text();
+        const match = markdown.match(/\`\`\`text\\s*([\\s\\S]*?)\\s*\`\`\`/i);
+        if (!match || !match[1].trim()) {
+          throw new Error("Master instruction text block was not found.");
+        }
+
+        state.subjectStrategistPrompt = match[1].trim();
+        elements.subjectStrategistStatus.textContent = "Strategist instructions loaded from GitHub Raw.";
+        elements.btnCopySubjectStrategist.disabled = false;
+      } catch (error) {
+        state.subjectStrategistPrompt = "";
+        elements.subjectStrategistStatus.textContent = "Unable to load strategist instructions. Check the GitHub Raw URL or connection.";
+        elements.btnCopySubjectStrategist.disabled = true;
+        console.error("Subject strategist load failed:", error);
+      }
     }
 
     function bindEvents() {
@@ -592,6 +651,10 @@
       // Copy Buttons
       elements.btnCopyJson.addEventListener("click", copyJsonToClipboard);
       elements.btnCopyPrompt.addEventListener("click", copyPromptToClipboard);
+      elements.btnCopySubjectStrategist.addEventListener("click", () => {
+        if (!state.subjectStrategistPrompt) return;
+        copyTextFallbackSafe(state.subjectStrategistPrompt, "Gemini subject instructions copied!");
+      });
 
       // Toggle Technical Error Details
       elements.btnToggleErrorDetails.addEventListener("click", () => {
