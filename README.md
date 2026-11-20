@@ -15,9 +15,10 @@ A key project convention is to keep reusable AI instructions and other externall
 - **Main application file:** `index.html`
 - **Application name in source:** AI Image Prompt Generator
 - **Target environment:** Gemini Canvas
-- **Intended AI runtime:** Gemini Canvas runtime without requiring the user to provide an API key.
+- **Intended AI runtime:** Gemini Canvas app runtime, using the Gemini-powered capability added through Canvas's **Add Gemini features** workflow; no user-provided API key.
+- **Runtime assumption approved by the user:** after Gemini features are added to this Canvas app, the generated app JavaScript can call the Canvas-provided Gemini capability. The app will use that capability to generate `subject` from the instructions loaded from `ai-subject-strategist.md`.
 
-The `index.html` source reviewed for this documentation sends generation requests to a Supabase Edge Function. It does not directly invoke a Gemini runtime API in the browser source. Do not describe native Gemini Canvas runtime integration as implemented unless the current source proves it.
+The current `index.html` fetches `template-prompt.md` from GitHub Raw and renders the master prompt in browser JavaScript. Gemini Canvas is the target execution environment. The project requirement is to use Gemini Canvas's **Add Gemini features** capability so the Canvas app can invoke Gemini-powered text generation from its own JavaScript runtime, without asking the user for a separate API key. The exact runtime bridge/function signature must be taken from the code that Gemini Canvas generates when this feature is added; do not invent an API name or claim the integration is implemented until that generated code is inspected.
 
 ## 3. File Editing Policy
 
@@ -143,8 +144,10 @@ Do not mark an integration as verified without checking the actual code or runni
 
 | File / component | Purpose | Consumer / dependency | Connection method | Status |
 |---|---|---|---|---|
-| `index.html` | Input UI, validation, fetches the master template, resolves variables, and renders/copies output | `template-prompt.md` | HTTP GET to GitHub Raw; variable resolution in browser JavaScript | Implemented in frontend; runtime fetch and browser behavior not yet independently tested |
-| `template-prompt.md` | Variable-based master image prompt template | `index.html` | GitHub Raw URL fetched with HTTP GET | Source created and wired as the frontend template source |
+| `index.html` | Input UI, validation, fetches the master template, resolves variables, and renders/copies output | `template-prompt.md` | HTTP GET to GitHub Raw; variable resolution in browser JavaScript | Implemented in source; live Canvas runtime fetch is not independently tested |
+| `template-prompt.md` | Variable-based master image prompt template | `index.html` | HTTP GET to GitHub Raw | Source created and wired as the frontend template source |
+| `ai-subject-strategist.md` | AI role and rules to generate `subject` only | `index.html` + Gemini Canvas AI capability | Planned: HTTP GET to GitHub Raw, then pass loaded instructions and product context to the Canvas-provided Gemini text-generation capability | Planned; file and integration not yet implemented |
+| Gemini Canvas AI capability | Generate text (`subject`) within the Canvas app | `index.html` | Canvas **Add Gemini features** workflow; use the actual generated runtime call/bridge | Capability documented by Google; exact generated app code/signature not yet inspected |
 | `README.md` | Project rules, architecture notes, integration map | Project contributors and AI assistants | Repository documentation | Reference/documentation |
 
 ### Current template source
@@ -157,21 +160,19 @@ https://raw.githubusercontent.com/applestoree/appletheexchangetrx/main/template-
 
 The current frontend sends the existing payload keys `subject`, `headline`, `subheadline`, `feature_items`, `background`, `composition`, `style`, `quality`, and `ratio`. These are the variable contract documented in `template-prompt.md`.
 
-**Current generation flow:** `index.html` fetches the Raw URL above with HTTP GET, extracts the fenced `text` master prompt, resolves the documented variables in the browser, and displays the generated prompt. The application no longer calls the `generate-image-prompt` Edge Function. The Edge Function itself has not been inspected or deleted; it is simply outside the current frontend generation flow.
+**Current prompt-rendering flow:** `index.html` fetches the Raw URL above with HTTP GET, extracts the fenced `text` master prompt, resolves the documented variables in the browser, and displays the resulting prompt. The current code still expects the user to supply `subject` and `headline`; automatic subject generation is not yet wired.
 
-**Verification status:** The source wiring is committed, but a live browser/runtime test of GitHub Raw CORS access and the complete generation interaction has not yet been performed.
+**Verification status:** The source wiring is committed, but a live browser/Canvas runtime test of GitHub Raw access and the complete prompt-rendering interaction has not yet been performed.
 
-## 5. Example External Source: AI Subject Strategist
+## 6. AI Subject Strategist: Intended Canvas Runtime Flow
 
-Example file: `ai-subject-strategist.md`
+Source file: `ai-subject-strategist.md`
 
 Purpose:
 
-- Define an AI role responsible for creating an effective visual subject.
-- Explain the relationship between category, subcategory, content pillar, and content type when those inputs are supplied.
-- Define how to derive a clear subject from available context.
-- Define behavior for missing or incomplete input.
-- Specify output format and quality criteria.
+- Define the AI role and strategy for generating an effective visual `subject`.
+- Generate **`subject` only**. It must not generate or overwrite `headline`, `subheadline`, or `feature_items`.
+- Keep reusable subject-generation instructions in this Markdown file as the single source of truth.
 
 Expected Raw URL:
 
@@ -179,7 +180,46 @@ Expected Raw URL:
 https://raw.githubusercontent.com/applestoree/appletheexchangetrx/main/ai-subject-strategist.md
 ```
 
-This is an example of an external source file and URL structure, not a claim that the file has already been created or integrated. Create the file only when requested. Keep reusable strategy in the Markdown source and let the application load it, rather than duplicating the entire strategy in frontend code.
+Intended data flow:
+
+```text
+User product/context inputs
+        │
+        ▼
+index.html — HTTP GET ai-subject-strategist.md
+        │
+        ▼
+Gemini Canvas-provided text-generation capability
+        │  instructions + user context
+        ▼
+subject (text only)
+        │
+        ▼
+index.html — HTTP GET template-prompt.md
+        │
+        ▼
+Resolve {{subject}} and other existing template variables
+        │
+        ▼
+Final image-generation prompt
+```
+
+### Gemini Canvas runtime assumption and boundary
+
+The user explicitly approves the implementation assumption that the Gemini Canvas app runtime exposes a Gemini-powered capability callable from the JavaScript of the Canvas app after the app's **Add Gemini features** capability has been enabled. `index.html` is intended to run as the app code inside Gemini Canvas, not as a separately hosted generic website.
+
+Google's official Gemini Apps Help documents that users can add Gemini-powered features, including text and image generation, to a Canvas app through **Add Gemini features**. It does not document a stable public JavaScript API name or function signature in that help article. Therefore:
+
+- Treat Canvas-provided Gemini text generation as the intended runtime mechanism, not an external Gemini API key or a new Supabase Edge Function.
+- When implementing, enable/add Gemini features to this Canvas app and inspect the actual generated JavaScript/runtime bridge that Canvas inserts.
+- Call the actual Canvas-generated mechanism from `index.html`; do not invent names such as `gemini.generateContent()` or assume a generic global exists without evidence in the generated app code.
+- The Canvas AI call must receive the fetched strategist instructions and the relevant user inputs, and return a plain-text `subject` for the existing prompt pipeline.
+- If Canvas has not yet injected/provided its AI runtime capability, automatic subject generation is unavailable until the feature is added. Do not silently fall back to a manual prompt or claim generation succeeded.
+- Never place a private API key in client-side source.
+
+Official reference: [Google Gemini Apps Help — Create docs, apps & more with Canvas](https://support.google.com/gemini/answer/16047321?hl=en), section **Add AI to your app**. The guide confirms Canvas can add Gemini-powered text/image generation, but the exact generated code must be inspected in the target app.
+
+This flow is **planned**, not yet implemented. The strategist file must be created and the actual Canvas-generated runtime integration verified before this map entry can be marked implemented.
 
 ## 6. Source of Truth and Conflict Handling
 
@@ -238,24 +278,15 @@ Current aspect ratios:
 
 This section documents observed behavior; it does not restrict future changes explicitly requested by the user.
 
-## 8. Current Generation Integration (Observed)
+## 9. Runtime Integration Rules
 
-The current frontend defines this endpoint:
+The app is intended to run as code inside Gemini Canvas. Its automatic subject-generation path must use the Gemini-powered runtime capability added through Canvas **Add Gemini features**, based on the user's approved assumption that this capability is callable by the app's JavaScript.
 
-```text
-https://axednjikcambzbkxyqpp.supabase.co/functions/v1/generate-image-prompt
-```
+Do not replace this with a direct Google Gemini API request that requires a user-managed API key, or with the previous `generate-image-prompt` Supabase Edge Function, unless the user explicitly changes the architecture. The existing `template-prompt.md` loading and variable-resolution flow remains a separate browser-side step.
 
-The `handleGeneratePrompt()` flow uses native `fetch()` to send a POST request with JSON content. The frontend expects:
+The actual JavaScript invocation is implementation-dependent: inspect the code generated by Canvas after enabling **Add Gemini features**, then use that exact callable interface. The official help article confirms that Canvas can add Gemini-powered text and image generation, but does not specify the runtime API signature. Keep the implementation aligned with the generated Canvas code and verify it in the Canvas preview.
 
-- `success === true`
-- A populated `data` field
-
-The reviewed frontend does not contain a direct Gemini API call or a Gemini API key. This file alone does not establish whether the Supabase Edge Function calls Gemini internally; that requires inspecting the function implementation.
-
-The intended target remains Gemini Canvas runtime without a user-supplied API key. Do not add an API-key input or hardcode secrets in frontend code. Keep credentials and secrets in appropriate secure backend configuration.
-
-## 9. Instructions for AI Assistants
+## 10. Instructions for AI Assistants
 
 When continuing this project:
 
@@ -264,7 +295,7 @@ When continuing this project:
 3. Identify whether the requested work concerns an external source, frontend runtime, or backend.
 4. Create or edit external-source files when the task concerns reusable AI instructions or reference content.
 5. Edit `index.html` when the task requires frontend UI, logic, runtime integration, or loading an external source.
-6. Edit the relevant backend function when the task requires server-side generation, API integration, validation, or backend behavior.
+6. For subject generation, use the Gemini Canvas-provided text-generation capability added through **Add Gemini features**; inspect and reuse the actual generated runtime call rather than inventing an API signature. Do not add a backend or API key unless the user changes the architecture.
 7. Keep each external source focused on one role or purpose. For example, subject-generation strategy belongs in `ai-subject-strategist.md`.
 8. Preserve filenames and established schemas unless the user requests a change.
 9. Do not duplicate large external instructions in `index.html` when they can be loaded from their source file.
@@ -283,9 +314,9 @@ When continuing this project:
 - Do not claim a source is loaded by the application unless the runtime code or a verified test demonstrates it.
 - Review affected frontend and backend behavior after implementation; do not claim tests passed unless they were actually run.
 
-## 10. Suggested Starting Instruction for a New AI Session
+## 11. Suggested Starting Instruction for a New AI Session
 
-> Read `README.md` and inspect the relevant repository files before working. This project supports standalone external-source files, such as `ai-subject-strategist.md`, which may be consumed through GitHub Raw URLs. You may create or edit external-source files, `index.html`, and relevant backend files when required by the user's task. Do not modify unrelated files or expand scope without confirmation. Keep reusable AI instructions in dedicated external-source files, and update the frontend/backend integration when necessary to load and use them. Follow the user's latest confirmed requirements and verify behavior before reporting completion.
+> Read `README.md` and inspect the relevant repository files before working. This project runs `index.html` inside Gemini Canvas. The approved design uses Canvas **Add Gemini features** for Gemini-powered text generation, with the Canvas-generated runtime call inspected and reused rather than an invented API signature or user-provided API key. `index.html` loads reusable AI instructions such as `ai-subject-strategist.md` and the master prompt `template-prompt.md` from GitHub Raw. The strategist generates `subject` only. You may edit the relevant external sources and `index.html`; do not modify unrelated files or expand scope. Verify the Canvas runtime integration and end-to-end behavior before reporting completion.
 
 ---
 
