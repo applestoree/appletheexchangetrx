@@ -85,7 +85,7 @@
       <div class="flex items-center gap-2">
         <div class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-obsidian-850 border border-slate-800 text-xs text-slate-400">
           <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span>Edge Function Ready</span>
+          <span>GitHub Template Ready</span>
         </div>
       </div>
     </div>
@@ -374,7 +374,7 @@
               <i data-lucide="sparkles" class="w-6 h-6 text-violet-400 animate-pulse"></i>
             </div>
             <h3 class="text-base font-semibold text-white mb-1">Generating Structured Prompt...</h3>
-            <p class="text-xs text-slate-400">Communicating with master template engine</p>
+            <p class="text-xs text-slate-400">Fetching master template from GitHub Raw</p>
           </div>
 
           <!-- State 3: Error State -->
@@ -445,9 +445,9 @@
   <script>
     /**
      * AI Image Prompt Generator
-     * Connects to Supabase Edge Function using native fetch() without auth headers.
+     * Loads the master prompt template directly from GitHub Raw using HTTP GET.
      */
-    const API_ENDPOINT = "https://axednjikcambzbkxyqpp.supabase.co/functions/v1/generate-image-prompt";
+    const TEMPLATE_URL = "https://raw.githubusercontent.com/applestoree/appletheexchangetrx/main/template-prompt.md";
 
     const ALLOWED_RATIOS = [
       "1:1 square",
@@ -776,91 +776,132 @@
     }
 
     /**
-     * Call Supabase Edge Function
+     * Fetch the external master template and render it with the validated payload.
      */
     async function handleGeneratePrompt() {
-      // Prevent duplicate concurrent requests
       if (state.isLoading) return;
-
-      // Validate input
       if (!validateForm()) return;
 
       const payload = buildPayload();
-
       setLoadingState(true);
       state.apiError = null;
 
       try {
-        const response = await fetch(API_ENDPOINT, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(payload)
+        const response = await fetch(TEMPLATE_URL, {
+          method: "GET",
+          headers: { "Accept": "text/markdown, text/plain;q=0.9, */*;q=0.8" },
+          cache: "no-cache"
         });
 
-        // Read raw text first to safely handle empty or invalid JSON responses
-        const rawText = await response.text();
-
-        if (!rawText || rawText.trim() === "") {
-          throw createStructuredError(
-            "Empty Server Response",
-            "Server mengembalikan respons kosong. Silakan coba beberapa saat lagi.",
-            `HTTP Status: ${response.status} ${response.statusText}\nResponse Body: <empty>`
-          );
-        }
-
-        let parsedJson;
-        try {
-          parsedJson = JSON.parse(rawText);
-        } catch (parseErr) {
-          throw createStructuredError(
-            "Invalid Response Format",
-            "Format respons dari server bukan JSON yang valid.",
-            `HTTP Status: ${response.status} ${response.statusText}\nParse Error: ${parseErr.message}\nRaw Response: ${rawText.slice(0, 500)}`
-          );
-        }
-
-        // Handle non-2xx HTTP status codes
         if (!response.ok) {
-          const userFriendlyMsg = mapHttpErrorMessage(response.status, parsedJson);
           throw createStructuredError(
-            `Request Failed (HTTP ${response.status})`,
-            userFriendlyMsg,
-            `HTTP Status: ${response.status} ${response.statusText}\nResponse: ${JSON.stringify(parsedJson, null, 2)}`
+            `Template Request Failed (HTTP ${response.status})`,
+            "Tidak dapat mengambil template dari GitHub Raw. Periksa URL atau koneksi internet.",
+            `HTTP Status: ${response.status} ${response.statusText}\\nSource: ${TEMPLATE_URL}`
           );
         }
 
-        // Verify result.success === true
-        if (!parsedJson || parsedJson.success !== true || !parsedJson.data) {
-          const serverMsg = parsedJson?.error || parsedJson?.message || "Server gagal memproses template prompt.";
+        const markdown = await response.text();
+        if (!markdown.trim()) {
           throw createStructuredError(
-            "Prompt Generation Failed",
-            serverMsg,
-            `Response Payload:\n${JSON.stringify(parsedJson, null, 2)}`
+            "Empty Template",
+            "File template-prompt.md kosong.",
+            `Source: ${TEMPLATE_URL}`
           );
         }
 
-        // Success
-        state.apiResponse = parsedJson;
-        renderSuccessOutput(parsedJson);
+        const prompt = renderMasterTemplate(markdown, payload);
+        state.apiResponse = {
+          success: true,
+          data: payload,
+          prompt,
+          meta: {
+            template_source: "GitHub Raw (template-prompt.md)",
+            rendered_at: new Date().toISOString()
+          }
+        };
+
+        renderSuccessOutput(state.apiResponse);
         showToast("Prompt generated successfully!", "success");
-
       } catch (err) {
-        if (err.isStructuredError) {
-          state.apiError = err;
-        } else {
-          // Network error / CORS / offline
-          state.apiError = {
-            title: "Network Connection Error",
-            message: "Tidak dapat terhubung ke server. Periksa koneksi internet Anda lalu coba lagi.",
-            details: `Error Name: ${err.name || "Error"}\nMessage: ${err.message || "Failed to fetch"}`
-          };
-        }
+        state.apiError = err.isStructuredError
+          ? err
+          : {
+              title: "Template Fetch Error",
+              message: "Tidak dapat mengambil template dari GitHub Raw. Periksa koneksi internet Anda.",
+              details: `Error Name: ${err.name || "Error"}\\nMessage: ${err.message || "Failed to fetch"}\\nSource: ${TEMPLATE_URL}`
+            };
         renderErrorOutput(state.apiError);
       } finally {
         setLoadingState(false);
       }
+    }
+
+    /**
+     * Extract the master prompt from the Markdown source and resolve its variables.
+     */
+    function renderMasterTemplate(markdown, payload) {
+      const match = markdown.match(/```text\\s*([\\s\\S]*?)\\s*```/i);
+      if (!match) {
+        throw createStructuredError(
+          "Template Format Error",
+          "Bagian master prompt (text code block) tidak ditemukan di template-prompt.md.",
+          "Expected a fenced code block starting with ```text."
+        );
+      }
+
+      let prompt = match[1].trim();
+      const featureItems = Array.isArray(payload.feature_items) ? payload.feature_items : [];
+      const featureText = featureItems.map((item) => `- ${item}`).join("\\n");
+
+      const optionalSections = [
+        ["FEATURE HIGHLIGHTS", "BACKGROUND AND ENVIRONMENT", featureText],
+        ["BACKGROUND AND ENVIRONMENT", "COMPOSITION AND LAYOUT", payload.background],
+        ["COMPOSITION AND LAYOUT", "ART DIRECTION", payload.composition],
+        ["ART DIRECTION", "LIGHTING, DETAIL, AND OUTPUT QUALITY", payload.style],
+        ["LIGHTING, DETAIL, AND OUTPUT QUALITY", "OUTPUT FORMAT", payload.quality]
+      ];
+
+      optionalSections.forEach(([heading, nextHeading, value]) => {
+        if (!String(value || "").trim()) {
+          const sectionPattern = new RegExp(
+            `\\n${heading}\\n[\\s\\S]*?(?=\\n${nextHeading}\\n)`,
+            "i"
+          );
+          prompt = prompt.replace(sectionPattern, "\\n");
+        }
+      });
+
+      if (!String(payload.subheadline || "").trim()) {
+        prompt = prompt.replace(/^Supporting subheadline: \\{\\{subheadline\\}\\}\\n?/m, "");
+      }
+
+      const values = {
+        subject: payload.subject,
+        headline: payload.headline,
+        subheadline: payload.subheadline,
+        feature_items: featureText,
+        background: payload.background,
+        composition: payload.composition,
+        style: payload.style,
+        quality: payload.quality,
+        ratio: payload.ratio
+      };
+
+      Object.entries(values).forEach(([key, value]) => {
+        prompt = prompt.replaceAll(`{{${key}}}`, String(value ?? ""));
+      });
+
+      const unresolved = prompt.match(/{{\\s*[a-zA-Z0-9_]+\\s*}}/);
+      if (unresolved) {
+        throw createStructuredError(
+          "Unresolved Template Variable",
+          `Variable template belum terisi: ${unresolved[0]}`,
+          "Periksa kesesuaian variable di template-prompt.md dengan payload index.html."
+        );
+      }
+
+      return prompt.replace(/\\n{3,}/g, "\\n\\n").trim();
     }
 
     function createStructuredError(title, message, details) {
@@ -944,25 +985,15 @@
       elements.btnCopyJson.disabled = false;
       elements.btnCopyPrompt.disabled = false;
 
-      // 1. Populate JSON View with syntax highlighting
       const formattedJson = JSON.stringify(data, null, 2);
       elements.jsonOutputCode.innerHTML = syntaxHighlightJson(formattedJson);
+      renderPromptView(responseObj.prompt || "");
 
-      // 2. Populate Human-Readable Prompt View
-      renderPromptView(data);
-
-      // 3. Populate Meta Info if present
-      if (responseObj.meta) {
-        elements.metaSource.textContent = responseObj.meta.template_source || "master_prompt";
-        if (responseObj.meta.rendered_at) {
-          try {
-            const date = new Date(responseObj.meta.rendered_at);
-            elements.metaTimestamp.textContent = date.toLocaleString();
-          } catch {
-            elements.metaTimestamp.textContent = responseObj.meta.rendered_at;
-          }
-        }
-      }
+      elements.metaSource.textContent = responseObj.meta?.template_source || "GitHub Raw";
+      const renderedAt = responseObj.meta?.rendered_at;
+      elements.metaTimestamp.textContent = renderedAt
+        ? new Date(renderedAt).toLocaleString()
+        : "";
     }
 
     /**
@@ -997,60 +1028,13 @@
     /**
      * Render Structured Prompt View from result.data
      */
-    function renderPromptView(data) {
-      const sections = [
-        { label: "Subject", value: data.subject, icon: "box" },
-        { label: "Headline", value: data.headline, icon: "type" },
-        { label: "Subheadline", value: data.subheadline, icon: "align-left" },
-        { label: "Feature Items", value: data.feature_items, icon: "list-checks", isList: true },
-        { label: "Background", value: data.background, icon: "image" },
-        { label: "Composition", value: data.composition, icon: "layout-template" },
-        { label: "Style", value: data.style, icon: "palette" },
-        { label: "Quality", value: data.quality, icon: "sparkles" },
-        { label: "Aspect Ratio", value: data.ratio, icon: "maximize-2" }
-      ];
-
+    function renderPromptView(prompt) {
       elements.viewPrompt.innerHTML = "";
 
-      sections.forEach((sec) => {
-        const card = document.createElement("div");
-        card.className = "rounded-xl bg-obsidian-950/90 border border-slate-800/90 p-3.5 transition-colors hover:border-slate-700";
-
-        const header = document.createElement("div");
-        header.className = "flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-violet-400 mb-1.5";
-        header.innerHTML = `<i data-lucide="${sec.icon}" class="w-3.5 h-3.5"></i><span>${sec.label}</span>`;
-        card.appendChild(header);
-
-        if (sec.isList) {
-          const items = Array.isArray(sec.value) ? sec.value : [];
-          if (items.length === 0) {
-            const emptyText = document.createElement("p");
-            emptyText.className = "text-xs text-slate-500 italic";
-            emptyText.textContent = "None specified";
-            card.appendChild(emptyText);
-          } else {
-            const ul = document.createElement("ul");
-            ul.className = "space-y-1.5 mt-1";
-            items.forEach((item) => {
-              const li = document.createElement("li");
-              li.className = "flex items-start gap-2 text-sm text-slate-200";
-              li.innerHTML = `<span class="text-violet-400 mt-1">â€¢</span><span>${escapeHtml(String(item))}</span>`;
-              ul.appendChild(li);
-            });
-            card.appendChild(ul);
-          }
-        } else {
-          const content = document.createElement("p");
-          const hasValue = sec.value !== undefined && sec.value !== null && String(sec.value).trim() !== "";
-          content.className = hasValue ? "text-sm text-slate-200 leading-relaxed whitespace-pre-wrap" : "text-xs text-slate-500 italic";
-          content.textContent = hasValue ? String(sec.value) : "Not specified";
-          card.appendChild(content);
-        }
-
-        elements.viewPrompt.appendChild(card);
-      });
-
-      lucide.createIcons();
+      const pre = document.createElement("pre");
+      pre.className = "rounded-xl bg-obsidian-950/90 border border-slate-800/90 p-4 text-sm text-slate-200 leading-relaxed whitespace-pre-wrap break-words font-mono";
+      pre.textContent = prompt || "No prompt generated.";
+      elements.viewPrompt.appendChild(pre);
     }
 
     function escapeHtml(str) {
@@ -1091,25 +1075,8 @@
      * Copy Formatted Structured Prompt to Clipboard
      */
     function copyPromptToClipboard() {
-      if (!state.apiResponse || !state.apiResponse.data) return;
-      const d = state.apiResponse.data;
-      const featuresFormatted = Array.isArray(d.feature_items) && d.feature_items.length > 0
-        ? d.feature_items.map((item) => `- ${item}`).join("\n")
-        : "-";
-
-      const structuredPrompt = [
-        `Subject: ${d.subject || "-"}`,
-        `Headline: ${d.headline || "-"}`,
-        `Subheadline: ${d.subheadline || "-"}`,
-        `Feature Items:\n${featuresFormatted}`,
-        `Background: ${d.background || "-"}`,
-        `Composition: ${d.composition || "-"}`,
-        `Style: ${d.style || "-"}`,
-        `Quality: ${d.quality || "-"}`,
-        `Aspect Ratio: ${d.ratio || "-"}`
-      ].join("\n\n");
-
-      copyTextFallbackSafe(structuredPrompt, "Structured prompt copied to clipboard!");
+      if (!state.apiResponse || !state.apiResponse.prompt) return;
+      copyTextFallbackSafe(state.apiResponse.prompt, "Generated prompt copied to clipboard!");
     }
 
     /**
