@@ -74,6 +74,71 @@ When working with an external source:
 5. If generation requires server-side processing, inspect and update the relevant backend function when needed.
 6. Do not claim the source is integrated until the application or backend actually loads and uses it.
 
+
+
+## 4. File Connectivity and Integration Rules
+
+**All project files that participate in an application feature must be connected and work together.** Creating a file is not complete merely because it exists in the repository.
+
+### 4.1 No disconnected project files
+
+- Every external-source file must have a defined consumer, such as `index.html` or a backend function.
+- Every frontend integration must point to the correct external source or backend endpoint.
+- Every backend function used by the frontend must expose the expected request and response contract.
+- Related schemas, field names, identifiers, and output formats must be consistent across the connected files.
+- Do not create unused, duplicate, orphaned, or unreachable source files.
+- If a file is intentionally reference-only and is not loaded by the application, identify it explicitly as documentation/reference material rather than implying it is integrated.
+
+### 4.2 Define the connection for each feature
+
+Before implementing a feature, identify its file flow:
+
+| Layer | Responsibility | Required connection |
+|---|---|---|
+| External source | AI role, instructions, rules, schemas, or presets | Must identify which frontend or backend consumer loads it |
+| Frontend (`index.html`) | UI, user interaction, loading sources, orchestration | Must load the intended source and/or call the correct backend |
+| Backend | Server-side AI processing, validation, integrations | Must receive the agreed input and return the agreed output to its caller |
+| External service | AI/runtime or other provider | Must be called through the intended runtime/backend integration |
+
+Not every feature needs every layer. Use only the layers required by that feature, and document the actual flow.
+
+### 4.3 Integration requirements
+
+For each connected feature:
+
+1. Identify the source file, consumer file, and direction of data/instruction flow.
+2. Use the actual GitHub Raw URL for repository-hosted external sources.
+3. Ensure the consumer fetches or otherwise loads the source; a URL written in documentation alone is not integration.
+4. Handle loading, HTTP errors, invalid content, and unavailable sources.
+5. Keep request/response contracts and data formats consistent between frontend and backend.
+6. Avoid hardcoding a second copy of external instructions in frontend or backend when the source file is intended to be the single source of truth.
+7. Verify the integration path before reporting the feature as connected.
+
+### 4.4 Change impact and synchronization
+
+When changing a file, inspect its dependencies and consumers. Update all directly affected files in the same task when authorized and necessary. Check for:
+
+- Broken or outdated Raw URLs.
+- Frontend references to missing or renamed source files.
+- Backend endpoints or payloads that no longer match frontend calls.
+- Inconsistent field names, schemas, and output structures.
+- Dead references and files no longer used.
+
+Do not make unrelated changes. If a necessary dependent change falls outside the requested scope or authorization, explain the dependency and ask before changing it.
+
+### 4.5 Integration map
+
+Maintain an integration map in this README as project files and features are added. Each entry should identify:
+
+- File/source.
+- Purpose.
+- Consumer/dependency.
+- Connection method (for example, GitHub Raw URL, HTTP endpoint, or import).
+- Status: implemented and verified, implemented but unverified, planned, or reference-only.
+
+Do not mark an integration as verified without checking the actual code or running an appropriate test.
+
+
 ## 5. Example External Source: AI Subject Strategist
 
 Example file: `ai-subject-strategist.md`
