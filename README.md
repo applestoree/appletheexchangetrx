@@ -143,8 +143,8 @@ Do not mark an integration as verified without checking the actual code or runni
 
 | File / component | Purpose | Consumer / dependency | Connection method | Status |
 |---|---|---|---|---|
-| `index.html` | Input UI, validation, output rendering | Supabase Edge Function `generate-image-prompt` | HTTP POST | Implemented in frontend; backend contract not re-verified |
-| `template-prompt.md` | Variable-based master image prompt template | Expected consumer: `generate-image-prompt` Edge Function | GitHub Raw URL | Source created; backend loading/use not yet verified |
+| `index.html` | Input UI, validation, fetches the master template, resolves variables, and renders/copies output | `template-prompt.md` | HTTP GET to GitHub Raw; variable resolution in browser JavaScript | Implemented in frontend; runtime fetch and browser behavior not yet independently tested |
+| `template-prompt.md` | Variable-based master image prompt template | `index.html` | GitHub Raw URL fetched with HTTP GET | Source created and wired as the frontend template source |
 | `README.md` | Project rules, architecture notes, integration map | Project contributors and AI assistants | Repository documentation | Reference/documentation |
 
 ### Current template source
@@ -157,7 +157,9 @@ https://raw.githubusercontent.com/applestoree/appletheexchangetrx/main/template-
 
 The current frontend sends the existing payload keys `subject`, `headline`, `subheadline`, `feature_items`, `background`, `composition`, `style`, `quality`, and `ratio`. These are the variable contract documented in `template-prompt.md`.
 
-**Integration gap:** The Supabase project connector did not authorize reading the `generate-image-prompt` Edge Function source during this task. Therefore, do not claim that the Edge Function already loads or applies `template-prompt.md`. The next integration step is to inspect that function, then update it to fetch and resolve the Raw URL while preserving its existing response contract. Verify the complete frontend-to-backend flow afterward.
+**Current generation flow:** `index.html` fetches the Raw URL above with HTTP GET, extracts the fenced `text` master prompt, resolves the documented variables in the browser, and displays the generated prompt. The application no longer calls the `generate-image-prompt` Edge Function. The Edge Function itself has not been inspected or deleted; it is simply outside the current frontend generation flow.
+
+**Verification status:** The source wiring is committed, but a live browser/runtime test of GitHub Raw CORS access and the complete generation interaction has not yet been performed.
 
 ## 5. Example External Source: AI Subject Strategist
 
