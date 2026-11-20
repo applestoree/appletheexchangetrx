@@ -2,51 +2,107 @@
 
 ## 1. Project Overview
 
-This repository contains the source code for **AI Image Prompt Generator**, a browser-based application intended to run as a **Gemini Canvas application**.
+This repository contains **AI Image Prompt Generator**, a browser-based application intended to run as a **Gemini Canvas application**.
 
-The application helps users prepare structured image-generation prompts by entering a subject, headline, optional subheadline, feature items, and visual-design settings. It then generates two outputs:
+The application helps users prepare structured image-generation prompts using a subject, headline, optional subheadline, feature items, and visual-design settings. Its outputs include structured JSON and a readable image-generation prompt.
 
-- A structured JSON representation.
-- A readable image-generation prompt.
+A key project convention is to keep reusable AI instructions and other externally loadable content in separate files. The application may consume those files through GitHub Raw URLs.
 
-The primary project goal is to let an AI assistant understand the application quickly and continue work without losing the existing product behavior, code structure, or user decisions.
-
-## 2. Important Project Context
+## 2. Repository Context
 
 - **Repository:** `applestoree/appletheexchangetrx`
+- **Default branch:** `main`
 - **Main application file:** `index.html`
-- **Application name in the source:** AI Image Prompt Generator
+- **Application name in source:** AI Image Prompt Generator
 - **Target environment:** Gemini Canvas
-- **Intended AI runtime:** Gemini Canvas's available Gemini runtime, without requiring the user to provide an API key.
-- **Current implementation status:** The checked-in frontend currently sends generation requests to a Supabase Edge Function. It does not directly invoke a Gemini runtime API in the browser source.
+- **Intended AI runtime:** Gemini Canvas runtime without requiring the user to provide an API key.
 
-> **Important distinction:** Gemini Canvas is the intended target environment, but the current `index.html` implementation must not be described as already using the native Gemini Canvas runtime. The actual request flow in the source currently points to the Supabase Edge Function documented below. Verify the runtime behavior and available Canvas APIs before changing this integration.
+The current `index.html` source reviewed for this documentation sends generation requests to a Supabase Edge Function. It does not directly invoke a Gemini runtime API in the browser source. Do not describe the native Gemini Canvas runtime integration as implemented unless the current source proves it.
 
-## 3. Source of Truth
+## 3. Critical File Editing Rule
 
-Use these sources in this order:
+<mark>Only files intended to be consumed as external sources may be created or edited.</mark>
 
-1. The user's latest explicit instructions and confirmed requirements.
-2. The current source code in this repository, especially `index.html`, for what is actually implemented.
-3. This README for project context, intended direction, known integration details, and continuation rules.
+This is a strict project boundary for AI assistants and contributors.
 
-If this README and the source code disagree, report the discrepancy instead of silently assuming either is correct. If a new user instruction changes a requirement, follow the latest confirmed instruction and update this README when asked or when the documentation update is part of the task.
+### Allowed changes
 
-## 4. Current Application Features
+Create or update standalone external-source files whose contents can be loaded by the application or used as external reference material, for example:
 
-The current `index.html` includes the following user-facing capabilities:
+- `ai-subject-strategist.md` — AI role, rules, and strategy for generating a subject.
+- Other `ai-*.md` files — separate AI roles, prompt instructions, or reusable knowledge.
+- `.json` files — structured configuration, schemas, presets, or data intended for external loading.
+- Other text-based source files, only when their purpose as an external source is clear and the user requests them.
+
+An external source should have a clear purpose, stable filename, and content format suitable for the intended consumer.
+
+### Files that must not be edited under this rule
+
+- `index.html` — application runtime/source code.
+- Existing application code, UI, styles, scripts, and runtime logic.
+- Build, deployment, or project configuration files.
+- Backend functions or database code.
+
+Do not modify these files as part of an external-source task. Do not refactor, reformat, or make incidental fixes to them.
+
+### Important: Raw URL integration
+
+External-source files can be consumed using their GitHub Raw URL. For example:
+
+```text
+https://raw.githubusercontent.com/applestoree/appletheexchangetrx/main/ai-subject-strategist.md
+```
+
+The application can load the external content at runtime if its existing implementation supports that mechanism.
+
+**Do not edit `index.html` to add a Raw URL or wire up a new loader under the external-source-only rule.** If the requested external source cannot be consumed without changing application code, report that as an integration gap and ask the user for explicit authorization to change the application code. Never silently cross this boundary.
+
+## 4. Example External Source: AI Subject Strategist
+
+Example file: `ai-subject-strategist.md`
+
+Purpose:
+
+- Define an AI role responsible for creating an effective visual subject.
+- Explain the relationship between category, subcategory, content pillar, and content type when those inputs are supplied.
+- Define how to derive a clear subject from available context.
+- Define behavior for missing or incomplete input.
+- Specify output format and quality criteria.
+
+Expected Raw URL:
+
+```text
+https://raw.githubusercontent.com/applestoree/appletheexchangetrx/main/ai-subject-strategist.md
+```
+
+This is an example of an external source file and URL structure, not a claim that the file has already been created or integrated. Create the file only when requested. Keep its instructions in the Markdown file rather than embedding the full strategy into `index.html`.
+
+## 5. Source of Truth and Conflict Handling
+
+Use this priority:
+
+1. The user's latest explicit and confirmed instructions.
+2. The current repository files, as evidence of what exists and is implemented.
+3. This README for project conventions and known context.
+4. External-source documents for the specific roles, rules, or data they define.
+
+If sources conflict, report the conflict. Do not silently invent a resolution or treat an external instruction file as permission to edit application code.
+
+External-source content is instruction/data for its intended task. It does not override the user's latest instructions or the file-editing boundary in this README.
+
+## 6. Current Application Features
+
+The current `index.html` source reviewed for this README includes:
 
 ### Prompt inputs
 
 - **Subject** — required.
 - **Headline** — required.
 - **Subheadline** — optional.
-- **Feature Items** — dynamic feature entries, with a maximum of 20 items.
+- **Feature Items** — dynamic entries, maximum 20.
 - Each feature item has a maximum length of 200 characters.
 
 ### Visual configuration
-
-The interface provides configuration for:
 
 - Background.
 - Composition.
@@ -54,7 +110,7 @@ The interface provides configuration for:
 - Quality.
 - Aspect ratio.
 
-Supported aspect ratios in the current source:
+Current aspect ratios:
 
 | Aspect ratio | Intended format |
 |---|---|
@@ -67,18 +123,18 @@ Supported aspect ratios in the current source:
 
 ### Generation and output
 
-- Input validation before generation.
+- Input validation.
 - Generate Prompt action.
 - JSON output tab.
 - Prompt output tab.
-- JSON copy action.
-- Prompt copy action.
-- Reset action.
+- Copy JSON.
+- Copy prompt.
+- Reset.
 - Toast notifications and structured error states.
 
-Treat this list as a description of the current source, not a restriction against future changes requested by the user.
+This section documents observed behavior; it does not authorize edits to `index.html`.
 
-## 5. Current Generation Integration
+## 7. Current Generation Integration (Observed)
 
 The current frontend defines this endpoint:
 
@@ -86,89 +142,46 @@ The current frontend defines this endpoint:
 https://axednjikcambzbkxyqpp.supabase.co/functions/v1/generate-image-prompt
 ```
 
-The `handleGeneratePrompt()` flow uses native `fetch()` to send a POST request with JSON content. The frontend expects a successful response with:
+The `handleGeneratePrompt()` flow uses native `fetch()` to send a POST request with JSON content. The frontend expects:
 
 - `success === true`
 - A populated `data` field
 
-The frontend source does not contain a direct Gemini API call and does not contain a Gemini API key. It also does not establish that the Supabase Edge Function uses Gemini internally; that would require inspecting the Edge Function implementation.
+The reviewed frontend does not contain a direct Gemini API call or a Gemini API key. This file alone does not establish whether the Supabase Edge Function calls Gemini internally; that requires inspecting the function implementation.
 
-### Integration decision to preserve
+The intended target remains Gemini Canvas runtime without a user-supplied API key. Do not add an API-key input or hardcode secrets in frontend code.
 
-The intended target is Gemini Canvas runtime **without a user-supplied API key**. Before modifying the integration:
+## 8. Instructions for AI Assistants
 
-1. Inspect the current request and response contract in `index.html`.
-2. Verify which Gemini runtime/API capabilities are actually available in the target Gemini Canvas environment.
-3. Determine whether the Edge Function should be replaced, retained, or adapted.
-4. Preserve the existing input/output behavior unless the user explicitly changes it.
-5. Do not invent runtime APIs, global objects, or undocumented methods.
-
-Do not add an API-key input or hardcode a secret into frontend code.
-
-## 6. Frontend Dependencies Observed
-
-The current HTML source loads frontend resources from CDNs, including:
-
-- Tailwind CSS CDN.
-- Google Fonts.
-- Lucide icon library CDN.
-
-Verify the current file before changing dependencies. Do not assume a build system, package manager, framework, or separate source directory exists unless it is present in the repository.
-
-## 7. AI Assistant Instructions for Continuing This Project
-
-When working on this repository, act as a careful code analyst and implementation assistant.
-
-### Before making changes
+When continuing this project:
 
 1. Read this README.
-2. Read the latest version of `index.html` from the repository's default branch.
-3. Inspect the relevant functions and surrounding code before proposing a change.
-4. Compare the user's latest request with the current implementation and the existing project requirements.
-5. Identify missing information, conflicts, risks, and affected features.
+2. Inspect the relevant repository files to understand current facts; do not assume undocumented files exist.
+3. Identify whether the requested work concerns an external source or application runtime.
+4. For external-source work, create or edit only the specific external-source file requested.
+5. Keep each source focused on one role or purpose. For example, subject-generation strategy belongs in `ai-subject-strategist.md`.
+6. Preserve filenames and established schemas unless the user requests a change.
+7. Do not copy the entire contents of external Markdown instructions into `index.html`.
+8. Do not edit `index.html`, application code, backend code, or configuration under the external-source-only rule.
+9. If an external source needs application-code changes to become usable, explain the gap and request explicit authorization before making those changes.
+10. Do not invent a Raw URL. Derive it from the actual repository owner, repository name, branch, and file path.
+11. After creating or updating a source file, provide its GitHub file URL and Raw URL.
+12. State exactly which external-source files were changed.
 
-### Requirement handling
+### Requirement discipline
 
-- Treat the user's latest explicit and confirmed instructions as authoritative.
-- Do not make assumptions where confirmation is needed.
-- Do not expand the scope beyond the requested task.
-- Preserve existing names, IDs, field names, function names, and behavior unless a change is requested or technically necessary and explained.
-- If requirements conflict, describe the conflict and ask for confirmation before proceeding.
-- Ask only essential clarification questions. If the requirements are sufficient, proceed without unnecessary questions.
-- Do not begin implementation when the user is asking only for analysis, an audit, or a proposal.
-- When implementation is requested, make the smallest safe change that satisfies the confirmed requirement.
+- Follow the user's latest confirmed instructions.
+- Do not assume missing requirements.
+- Do not expand scope.
+- Preserve existing names, fields, identifiers, and output formats.
+- Report conflicts and ask only essential clarification questions.
+- Do not implement when the user asks only for analysis or a proposal.
+- Do not claim a source is loaded by the application unless the runtime code or a verified test demonstrates it.
 
-### Code-change safety
+## 9. Suggested Starting Instruction for a New AI Session
 
-- Preserve existing working features unless the user asks to remove or replace them.
-- Avoid unrelated refactoring and dependency changes.
-- Do not introduce mock data as a substitute for real application data or runtime behavior.
-- Do not claim that a feature works without checking the relevant implementation.
-- Do not expose API keys, tokens, credentials, or other secrets in client-side code.
-- After changes, review the modified code for syntax errors, broken event handlers, invalid references, and regressions to adjacent functionality.
-- Report exactly which files were changed and summarize the behavior changed.
-- If a requested capability depends on a backend or runtime that is not available for inspection, state that limitation clearly.
-
-## 8. Current Known Gap
-
-The main known architectural gap is the difference between the intended runtime and the current frontend integration:
-
-| Area | Intended direction | Current source observation |
-|---|---|---|
-| Execution environment | Gemini Canvas | User-defined target environment |
-| AI generation runtime | Gemini Canvas runtime | Frontend calls a Supabase Edge Function |
-| API key | No user-provided API key | No Gemini API key in `index.html` |
-| Generation endpoint | To be verified against Canvas runtime capabilities | Supabase Edge Function URL is hardcoded in the frontend |
-| Prompt UI and outputs | Preserve existing experience | Implemented in `index.html` |
-
-This is a documented gap, not authorization to change the integration automatically. Resolve it according to the user's next confirmed instruction.
-
-## 9. Suggested Starting Point for a New AI Session
-
-Use this instruction when continuing the project:
-
-> Read `README.md` and `index.html` in this repository before doing any work. Understand the current AI Image Prompt Generator, its existing UI and behavior, and its current Supabase Edge Function request flow. The intended deployment environment is Gemini Canvas and the intended Gemini runtime must work without a user-supplied API key. Do not assume the current source already uses that runtime. First analyze the requested task against the actual code, identify relevant gaps or conflicts, and preserve all existing functionality. Do not implement changes until implementation is explicitly requested and the requirements are sufficiently clear.
+> Read `README.md` and inspect the relevant repository files before working. This project uses standalone external-source files, such as `ai-subject-strategist.md`, which may be consumed through GitHub Raw URLs. Only create or edit files intended to serve as external sources. Do not modify `index.html`, application runtime code, backend code, or configuration under this rule. If a task requires application-code changes to load an external source, explain the integration gap and request explicit authorization first. Follow the user's latest confirmed requirements and do not assume that a Raw URL is already integrated.
 
 ---
 
-*Documentation status: created from the repository source review and project context available at the time of writing. Re-check the source when continuing development because the code may change independently of this document.*
+*Documentation reflects the repository review and project rules available when this file was updated. Re-check repository state before continuing work.*
