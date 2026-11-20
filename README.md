@@ -17,35 +17,45 @@ A key project convention is to keep reusable AI instructions and other externall
 - **Target environment:** Gemini Canvas
 - **Intended AI runtime:** Gemini Canvas runtime without requiring the user to provide an API key.
 
-The current `index.html` source reviewed for this documentation sends generation requests to a Supabase Edge Function. It does not directly invoke a Gemini runtime API in the browser source. Do not describe the native Gemini Canvas runtime integration as implemented unless the current source proves it.
+The `index.html` source reviewed for this documentation sends generation requests to a Supabase Edge Function. It does not directly invoke a Gemini runtime API in the browser source. Do not describe native Gemini Canvas runtime integration as implemented unless the current source proves it.
 
-## 3. Critical File Editing Rule
+## 3. File Editing Policy
 
-<mark>Only files intended to be consumed as external sources may be created or edited.</mark>
+The project uses separate external-source files for reusable AI instructions and reference content. The following file categories are permitted to be created or edited when relevant to the user's request.
 
-This is a strict project boundary for AI assistants and contributors.
+### 3.1 Allowed files
 
-### Allowed changes
+**A. External source files**
 
-Create or update standalone external-source files whose contents can be loaded by the application or used as external reference material, for example:
+Examples:
 
 - `ai-subject-strategist.md` — AI role, rules, and strategy for generating a subject.
 - Other `ai-*.md` files — separate AI roles, prompt instructions, or reusable knowledge.
 - `.json` files — structured configuration, schemas, presets, or data intended for external loading.
-- Other text-based source files, only when their purpose as an external source is clear and the user requests them.
+- Other text-based files whose purpose as an external source is clear.
 
-An external source should have a clear purpose, stable filename, and content format suitable for the intended consumer.
+**B. Main application file**
 
-### Files that must not be edited under this rule
+- `index.html` — application UI, frontend logic, external-source loading, and runtime integration.
 
-- `index.html` — application runtime/source code.
-- Existing application code, UI, styles, scripts, and runtime logic.
-- Build, deployment, or project configuration files.
-- Backend functions or database code.
+**C. Backend files**
 
-Do not modify these files as part of an external-source task. Do not refactor, reformat, or make incidental fixes to them.
+- Backend functions and related server-side code used by this application, including Supabase Edge Functions where applicable.
+- Backend logic may be edited when needed to implement or maintain the requested application behavior.
 
-### Important: Raw URL integration
+### 3.2 Other files
+
+Do not create or edit unrelated files, build/deployment configuration, database schema, or other application files unless the user explicitly requests it or confirms that it is necessary.
+
+### 3.3 Scope and authorization
+
+- The user may request changes to external sources, `index.html`, or backend code.
+- Edit only the files needed for the requested task.
+- Do not treat permission to edit `index.html` and backend as permission for unrelated refactoring or scope expansion.
+- If a task requires changing another file category, explain why and obtain confirmation before proceeding.
+- Preserve existing behavior, names, identifiers, schemas, and interfaces unless the user requests a change or the change is necessary and explained.
+
+## 4. External Sources and GitHub Raw URLs
 
 External-source files can be consumed using their GitHub Raw URL. For example:
 
@@ -53,11 +63,18 @@ External-source files can be consumed using their GitHub Raw URL. For example:
 https://raw.githubusercontent.com/applestoree/appletheexchangetrx/main/ai-subject-strategist.md
 ```
 
-The application can load the external content at runtime if its existing implementation supports that mechanism.
+The application can load external content at runtime only if the application code implements the loading mechanism.
 
-**Do not edit `index.html` to add a Raw URL or wire up a new loader under the external-source-only rule.** If the requested external source cannot be consumed without changing application code, report that as an integration gap and ask the user for explicit authorization to change the application code. Never silently cross this boundary.
+When working with an external source:
 
-## 4. Example External Source: AI Subject Strategist
+1. Keep its content in a dedicated file with a clear purpose.
+2. Use a stable and descriptive filename.
+3. Derive the Raw URL from the actual repository owner, repository name, branch, and file path.
+4. If required, update `index.html` to load and use the source, because `index.html` is an allowed file.
+5. If generation requires server-side processing, inspect and update the relevant backend function when needed.
+6. Do not claim the source is integrated until the application or backend actually loads and uses it.
+
+## 5. Example External Source: AI Subject Strategist
 
 Example file: `ai-subject-strategist.md`
 
@@ -75,9 +92,9 @@ Expected Raw URL:
 https://raw.githubusercontent.com/applestoree/appletheexchangetrx/main/ai-subject-strategist.md
 ```
 
-This is an example of an external source file and URL structure, not a claim that the file has already been created or integrated. Create the file only when requested. Keep its instructions in the Markdown file rather than embedding the full strategy into `index.html`.
+This is an example of an external source file and URL structure, not a claim that the file has already been created or integrated. Create the file only when requested. Keep reusable strategy in the Markdown source and let the application load it, rather than duplicating the entire strategy in frontend code.
 
-## 5. Source of Truth and Conflict Handling
+## 6. Source of Truth and Conflict Handling
 
 Use this priority:
 
@@ -86,11 +103,11 @@ Use this priority:
 3. This README for project conventions and known context.
 4. External-source documents for the specific roles, rules, or data they define.
 
-If sources conflict, report the conflict. Do not silently invent a resolution or treat an external instruction file as permission to edit application code.
+If sources conflict, report the conflict. Do not silently invent a resolution.
 
-External-source content is instruction/data for its intended task. It does not override the user's latest instructions or the file-editing boundary in this README.
+External-source content is instruction/data for its intended task. It does not override the user's latest instructions or this file-editing policy.
 
-## 6. Current Application Features
+## 7. Current Application Features
 
 The current `index.html` source reviewed for this README includes:
 
@@ -132,9 +149,9 @@ Current aspect ratios:
 - Reset.
 - Toast notifications and structured error states.
 
-This section documents observed behavior; it does not authorize edits to `index.html`.
+This section documents observed behavior; it does not restrict future changes explicitly requested by the user.
 
-## 7. Current Generation Integration (Observed)
+## 8. Current Generation Integration (Observed)
 
 The current frontend defines this endpoint:
 
@@ -149,24 +166,24 @@ The `handleGeneratePrompt()` flow uses native `fetch()` to send a POST request w
 
 The reviewed frontend does not contain a direct Gemini API call or a Gemini API key. This file alone does not establish whether the Supabase Edge Function calls Gemini internally; that requires inspecting the function implementation.
 
-The intended target remains Gemini Canvas runtime without a user-supplied API key. Do not add an API-key input or hardcode secrets in frontend code.
+The intended target remains Gemini Canvas runtime without a user-supplied API key. Do not add an API-key input or hardcode secrets in frontend code. Keep credentials and secrets in appropriate secure backend configuration.
 
-## 8. Instructions for AI Assistants
+## 9. Instructions for AI Assistants
 
 When continuing this project:
 
 1. Read this README.
 2. Inspect the relevant repository files to understand current facts; do not assume undocumented files exist.
-3. Identify whether the requested work concerns an external source or application runtime.
-4. For external-source work, create or edit only the specific external-source file requested.
-5. Keep each source focused on one role or purpose. For example, subject-generation strategy belongs in `ai-subject-strategist.md`.
-6. Preserve filenames and established schemas unless the user requests a change.
-7. Do not copy the entire contents of external Markdown instructions into `index.html`.
-8. Do not edit `index.html`, application code, backend code, or configuration under the external-source-only rule.
-9. If an external source needs application-code changes to become usable, explain the gap and request explicit authorization before making those changes.
+3. Identify whether the requested work concerns an external source, frontend runtime, or backend.
+4. Create or edit external-source files when the task concerns reusable AI instructions or reference content.
+5. Edit `index.html` when the task requires frontend UI, logic, runtime integration, or loading an external source.
+6. Edit the relevant backend function when the task requires server-side generation, API integration, validation, or backend behavior.
+7. Keep each external source focused on one role or purpose. For example, subject-generation strategy belongs in `ai-subject-strategist.md`.
+8. Preserve filenames and established schemas unless the user requests a change.
+9. Do not duplicate large external instructions in `index.html` when they can be loaded from their source file.
 10. Do not invent a Raw URL. Derive it from the actual repository owner, repository name, branch, and file path.
-11. After creating or updating a source file, provide its GitHub file URL and Raw URL.
-12. State exactly which external-source files were changed.
+11. Verify that external content is successfully loaded and used before claiming integration is complete.
+12. State exactly which files were changed and why.
 
 ### Requirement discipline
 
@@ -177,10 +194,11 @@ When continuing this project:
 - Report conflicts and ask only essential clarification questions.
 - Do not implement when the user asks only for analysis or a proposal.
 - Do not claim a source is loaded by the application unless the runtime code or a verified test demonstrates it.
+- Review affected frontend and backend behavior after implementation; do not claim tests passed unless they were actually run.
 
-## 9. Suggested Starting Instruction for a New AI Session
+## 10. Suggested Starting Instruction for a New AI Session
 
-> Read `README.md` and inspect the relevant repository files before working. This project uses standalone external-source files, such as `ai-subject-strategist.md`, which may be consumed through GitHub Raw URLs. Only create or edit files intended to serve as external sources. Do not modify `index.html`, application runtime code, backend code, or configuration under this rule. If a task requires application-code changes to load an external source, explain the integration gap and request explicit authorization first. Follow the user's latest confirmed requirements and do not assume that a Raw URL is already integrated.
+> Read `README.md` and inspect the relevant repository files before working. This project supports standalone external-source files, such as `ai-subject-strategist.md`, which may be consumed through GitHub Raw URLs. You may create or edit external-source files, `index.html`, and relevant backend files when required by the user's task. Do not modify unrelated files or expand scope without confirmation. Keep reusable AI instructions in dedicated external-source files, and update the frontend/backend integration when necessary to load and use them. Follow the user's latest confirmed requirements and verify behavior before reporting completion.
 
 ---
 
